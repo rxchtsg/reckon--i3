@@ -25,10 +25,11 @@ export default function ResultsPage() {
 
   // Live historical-return rates, cached by SWR. Falls back to the fixed
   // defaults inside buildProjection whenever this is undefined/null.
-  const { data: liveRates } = useSWR("return-rates", fetchReturnRates, {
-    revalidateOnFocus: false,
-    shouldRetryOnError: false,
-  })
+  const { data: liveRates, isLoading: ratesLoading } = useSWR(
+    "return-rates",
+    fetchReturnRates,
+    { revalidateOnFocus: false, shouldRetryOnError: false },
+  )
 
   const projection = useMemo(
     () => (plan ? buildProjection(plan, liveRates ?? undefined) : null),
@@ -101,9 +102,16 @@ export default function ResultsPage() {
           <h2 className="mb-1 font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             How each scenario plays out
           </h2>
-          <p className="mb-4 text-sm text-muted-foreground">
-            Projected final amount over {projection.years.toFixed(1)} years.
-          </p>
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <p className="text-sm text-muted-foreground">
+              Projected final amount over {projection.years.toFixed(1)} years.
+            </p>
+            {!ratesLoading && (
+              <span className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-muted-foreground/50">
+                {liveRates ? "· Live market data" : "· Fixed estimates"}
+              </span>
+            )}
+          </div>
           <div className="grid gap-4 sm:grid-cols-3">
             <ScenarioCard scenario={projection.scenarios.bear} target={plan.target} />
             <ScenarioCard scenario={projection.scenarios.base} target={plan.target} highlight />
