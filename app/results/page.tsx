@@ -12,6 +12,12 @@ import { SuggestedActions } from "@/components/suggested-actions"
 import { PortfolioOptimization } from "@/components/portfolio-optimization"
 import { buildProjection, formatCurrency } from "@/lib/projection"
 
+// Shared dark navy→black gradient, identical to the landing page.
+const GRADIENT_BG = {
+  backgroundImage:
+    "linear-gradient(180deg, oklch(0.23 0.035 255) 0%, oklch(0.18 0.018 250) 32%, var(--background) 70%)",
+}
+
 export default function ResultsPage() {
   const { plan } = usePlan()
 
@@ -22,7 +28,7 @@ export default function ResultsPage() {
 
   if (!plan || !projection) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-screen" style={GRADIENT_BG}>
         <SiteHeader />
         <main className="mx-auto flex max-w-md flex-col items-center px-5 py-24 text-center">
           <h1 className="text-xl font-semibold tracking-tight">
@@ -47,7 +53,7 @@ export default function ResultsPage() {
   })
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen" style={GRADIENT_BG}>
       <SiteHeader />
       <main className="mx-auto max-w-3xl px-5 py-10 sm:py-14">
         <div className="flex items-center justify-between gap-4">
@@ -63,8 +69,16 @@ export default function ResultsPage() {
           </p>
         </div>
 
+        {/* Eyebrow badge — matches the landing page's "Scenario planning" badge */}
+        <div className="mt-8 flex items-center gap-3">
+          <span className="font-mono text-xs font-medium uppercase tracking-[0.2em] text-primary">
+            Your results
+          </span>
+          <span className="h-px w-12 bg-primary/40" aria-hidden="true" />
+        </div>
+
         {/* Callout — the hero message everything else supports */}
-        <div className="mt-6">
+        <div className="mt-5">
           <GoalCallout projection={projection} />
         </div>
 
@@ -78,7 +92,7 @@ export default function ResultsPage() {
 
         {/* Scenarios — supporting detail */}
         <div className="mt-12">
-          <h2 className="mb-1 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          <h2 className="mb-1 font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             How each scenario plays out
           </h2>
           <p className="mb-4 text-sm text-muted-foreground">
@@ -114,7 +128,7 @@ export default function ResultsPage() {
 function SummaryStat({ label, value }: { label: string; value: string }) {
   return (
     <div className="bg-card px-4 py-3">
-      <dt className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+      <dt className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
         {label}
       </dt>
       <dd className="mt-1 truncate text-sm font-medium text-foreground">
