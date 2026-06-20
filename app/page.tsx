@@ -48,15 +48,15 @@ export default function FormPage() {
   const { setPlan } = usePlan()
 
   const [holdings, setHoldings] = useState<Holding[]>(() => [
-    { id: "h1", ticker: "VTSAX", amount: "42,000" },
-    { id: "h2", ticker: "AAPL", amount: "8,500" },
+    { id: "h1", ticker: "SPY", amount: "1,500" },
+    { id: "h2", ticker: "NVDA", amount: "1,000" },
     makeEmptyHolding(),
   ])
-  const [monthly, setMonthly] = useState("1,000")
+  const [monthly, setMonthly] = useState("150")
   const [riskScore, setRiskScore] = useState(50)
-  const [target, setTarget] = useState("250,000")
-  const [currentAge, setCurrentAge] = useState("30")
-  const [targetAge, setTargetAge] = useState("40")
+  const [target, setTarget] = useState("50,000")
+  const [currentAge, setCurrentAge] = useState("25")
+  const [targetAge, setTargetAge] = useState("35")
   const [calculating, setCalculating] = useState(false)
 
   function handleSubmit(e: FormEvent) {
