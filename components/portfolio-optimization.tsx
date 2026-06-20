@@ -2,8 +2,7 @@ import Link from "next/link"
 import { ArrowRight, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-// TODO: replace with live dashboard URL
-const OPTIMIZATION_URL = "/optimization"
+const OPTIMIZATION_URL = "https://povercel.vercel.app/"
 
 // Placeholder allocation weights — purely illustrative, not real data.
 const SEGMENTS = [
@@ -35,7 +34,7 @@ export function PortfolioOptimization() {
           </p>
 
           <Button
-            render={<Link href={OPTIMIZATION_URL} />}
+            render={<Link href={OPTIMIZATION_URL} target="_blank" rel="noopener noreferrer" />}
             nativeButton={false}
             className="mt-5 font-medium"
           >
