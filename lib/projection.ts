@@ -3,7 +3,7 @@ export type Risk = "low" | "medium" | "high"
 export type PlanInput = {
   holdings: string
   monthly: number
-  risk: Risk
+  riskScore: number // continuous 0-100 risk tolerance
   target: number
   currentAge: number
   targetAge: number
@@ -30,6 +30,7 @@ export type Projection = {
   scenarios: Record<ScenarioKey, Scenario>
   target: number
   goalMet: boolean
+  baseGoalMet: boolean // base (most likely) final >= target — drives action framing
   surplus: number // bear final - target (negative = shortfall)
   actions: SuggestedAction[]
 }
@@ -45,7 +46,34 @@ export const DEFAULT_RATES: RiskRates = {
   high: { bear: -0.03, base: 0.1, bull: 0.16 },
 }
 
-const RISK_ORDER: Risk[] = ["low", "medium", "high"]
+/**
+ * Map a continuous 0-100 risk score onto bear/base/bull rates by linearly
+ * interpolating across the three underlying bands (low → medium → high).
+ * This keeps the active assumptions — fetched market rates or the fixed
+ * fallback — fully in play while letting the slider move continuously.
+ */
+export function ratesForScore(
+  score: number,
+  riskRates: RiskRates = DEFAULT_RATES,
+): ScenarioRates {
+  const s = Math.min(100, Math.max(0, score))
+  const t = s / 50 // 0 at low, 1 at medium, 2 at high
+  const lerp = (a: number, b: number, f: number) => a + (b - a) * f
+  const pick = (key: keyof ScenarioRates) =>
+    t <= 1
+      ? lerp(riskRates.low[key], riskRates.medium[key], t)
+      : lerp(riskRates.medium[key], riskRates.high[key], t - 1)
+  return { bear: pick("bear"), base: pick("base"), bull: pick("bull") }
+}
+
+/** Human-readable label for a 0-100 risk score. */
+export function riskLabel(score: number): string {
+  if (score < 20) return "Low"
+  if (score < 40) return "Low-Medium"
+  if (score < 60) return "Medium"
+  if (score < 80) return "Medium-High"
+  return "High"
+}
 
 /** Sum every number found in the free-text holdings list. */
 export function parseHoldings(holdings: string): number {
@@ -112,7 +140,7 @@ export function buildProjection(
   const startingPrincipal = parseHoldings(input.holdings)
   const months = monthsFromAges(input.currentAge, input.targetAge)
   const years = months / 12
-  const rates = riskRates[input.risk]
+  const rates = ratesForScore(input.riskScore, riskRates)
 
   const scenarios: Record<ScenarioKey, Scenario> = {
     bear: {
@@ -141,6 +169,10 @@ export function buildProjection(
   const surplus = bearFinal - input.target
   const goalMet = surplus >= 0
 
+  // The suggested actions are framed around the Base (most likely) outcome, so
+  // the action heading must use the same measure to stay consistent.
+  const baseGoalMet = scenarios.base.finalAmount >= input.target
+
   const actions = buildActions(input, scenarios, startingPrincipal, months, riskRates)
 
   return {
@@ -150,6 +182,7 @@ export function buildProjection(
     scenarios,
     target: input.target,
     goalMet,
+    baseGoalMet,
     surplus,
     actions,
   }
@@ -204,25 +237,50 @@ function buildActions(
     })
   }
 
-  // 3. Step up risk band if not already aggressive.
-  const idx = RISK_ORDER.indexOf(input.risk)
-  if (idx < RISK_ORDER.length - 1) {
-    const nextRisk = RISK_ORDER[idx + 1]
-    const nextBase = riskRates[nextRisk].base
-    const projected = futureValue(principal, input.monthly, nextBase, months)
+  // 3. Move the risk slider higher to close the gap at the new Base rate.
+  const targetScore = scoreToHitTarget(
+    principal,
+    input.monthly,
+    months,
+    input.target,
+    riskRates,
+    input.riskScore,
+  )
+  if (targetScore !== null) {
+    const newBase = ratesForScore(targetScore, riskRates).base
+    const projected = futureValue(principal, input.monthly, newBase, months)
     actions.push({
-      title: `Shift toward a ${nextRisk}-risk allocation`,
-      detail: `A ${nextRisk}-risk mix targets ~${(nextBase * 100).toFixed(0)}% annual returns, lifting your Base projection to about ${formatCurrency(projected)} — though with wider swings.`,
+      title: `Move the risk slider to approximately ${Math.round(targetScore)}`,
+      detail: `Raising your risk setting from about ${Math.round(input.riskScore)} to ${Math.round(targetScore)} (of 100) targets roughly ${(newBase * 100).toFixed(1)}% annual returns, lifting your Base projection to about ${formatCurrency(projected)} — though with wider swings.`,
     })
   } else {
     actions.push({
       title: "Reduce the target or trim fees",
       detail:
-        "You're already at the highest risk band. Lowering the goal, cutting investment fees, or adding a lump sum are the remaining levers.",
+        "Even at the maximum risk setting the gap remains. Lowering the goal, cutting investment fees, or adding a lump sum are the remaining levers.",
     })
   }
 
   return actions.slice(0, 3)
+}
+
+/**
+ * Smallest risk-slider position (above the current one) whose Base rate would
+ * reach the target in the available time, or null if even 100 falls short.
+ */
+function scoreToHitTarget(
+  principal: number,
+  monthly: number,
+  months: number,
+  target: number,
+  riskRates: RiskRates,
+  currentScore: number,
+): number | null {
+  for (let s = Math.ceil(currentScore) + 1; s <= 100; s++) {
+    const base = ratesForScore(s, riskRates).base
+    if (futureValue(principal, monthly, base, months) >= target) return s
+  }
+  return null
 }
 
 function extraMonthsToHit(

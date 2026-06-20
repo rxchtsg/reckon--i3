@@ -1,32 +1,26 @@
 "use client"
 
-import { useRef, useState, type FormEvent } from "react"
+import { useState, type FormEvent } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowRight, Loader2, Plus } from "lucide-react"
+import { ArrowRight, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SiteHeader } from "@/components/site-header"
 import { usePlan } from "@/components/plan-provider"
-import type { Risk } from "@/lib/projection"
+import {
+  HoldingsInput,
+  makeEmptyHolding,
+  type Holding,
+} from "@/components/holdings-input"
+import { riskLabel } from "@/lib/projection"
 
-const RISK_LEVELS: { value: Risk; label: string; blurb: string }[] = [
-  { value: "low", label: "Low", blurb: "Capital preservation, steadier returns" },
-  { value: "medium", label: "Medium", blurb: "Balanced growth and volatility" },
-  { value: "high", label: "High", blurb: "Maximum growth, wider swings" },
-]
-
-// Most popular tickers for the quick-add chips.
-const POPULAR_TICKERS = [
-  "VOO",
-  "VTSAX",
-  "AAPL",
-  "MSFT",
-  "NVDA",
-  "GOOGL",
-  "AMZN",
-  "TSLA",
-  "QQQ",
-  "BTC",
-]
+// Short descriptor shown next to the continuous risk-tolerance label.
+const RISK_BLURBS: Record<string, string> = {
+  Low: "Capital preservation, steadier returns",
+  "Low-Medium": "Mostly defensive with some growth",
+  Medium: "Balanced growth and volatility",
+  "Medium-High": "Growth-tilted, bigger swings",
+  High: "Maximum growth, wider swings",
+}
 
 const HOW_IT_WORKS: { title: string; description: string }[] = [
   {
@@ -52,13 +46,14 @@ function parseAge(value: string): number {
 export default function FormPage() {
   const router = useRouter()
   const { setPlan } = usePlan()
-  const holdingsRef = useRef<HTMLTextAreaElement>(null)
 
-  const [holdings, setHoldings] = useState(
-    "VTSAX — 42,000\nApple (AAPL) — 8,500\nCash — 5,000",
-  )
+  const [holdings, setHoldings] = useState<Holding[]>(() => [
+    { id: "h1", ticker: "VTSAX", amount: "42,000" },
+    { id: "h2", ticker: "AAPL", amount: "8,500" },
+    makeEmptyHolding(),
+  ])
   const [monthly, setMonthly] = useState("1,000")
-  const [riskIndex, setRiskIndex] = useState(1)
+  const [riskScore, setRiskScore] = useState(50)
   const [target, setTarget] = useState("250,000")
   const [currentAge, setCurrentAge] = useState("30")
   const [targetAge, setTargetAge] = useState("40")
@@ -67,10 +62,16 @@ export default function FormPage() {
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setCalculating(true)
+    // Serialize structured rows into the "TICKER — amount" lines the
+    // projection's holdings parser already understands.
+    const serialized = holdings
+      .filter((h) => h.amount.trim() !== "")
+      .map((h) => `${h.ticker || "Holding"} — ${h.amount}`)
+      .join("\n")
     setPlan({
-      holdings,
+      holdings: serialized,
       monthly: parseMoney(monthly),
-      risk: RISK_LEVELS[riskIndex].value,
+      riskScore,
       target: parseMoney(target),
       currentAge: parseAge(currentAge),
       targetAge: parseAge(targetAge),
@@ -79,21 +80,7 @@ export default function FormPage() {
     setTimeout(() => router.push("/results"), 650)
   }
 
-  // Append "TICKER — " on a new line and place the cursor right after the dash.
-  function addTicker(ticker: string) {
-    const needsBreak = holdings.length > 0 && !holdings.endsWith("\n")
-    const next = `${holdings}${needsBreak ? "\n" : ""}${ticker} — `
-    setHoldings(next)
-    requestAnimationFrame(() => {
-      const el = holdingsRef.current
-      if (!el) return
-      el.focus()
-      el.setSelectionRange(next.length, next.length)
-      el.scrollTop = el.scrollHeight
-    })
-  }
-
-  const risk = RISK_LEVELS[riskIndex]
+  const riskName = riskLabel(riskScore)
   const yearsToGoal = Math.max(0, parseAge(targetAge) - parseAge(currentAge))
 
   return (
@@ -130,38 +117,10 @@ export default function FormPage() {
             {/* Holdings */}
             <Field
               label="Current investment holdings"
-              hint="List each position on its own line — we'll total the dollar amounts."
+              hint="Add each position with its ticker and current dollar balance."
               htmlFor="holdings"
             >
-              <textarea
-                ref={holdingsRef}
-                id="holdings"
-                value={holdings}
-                onChange={(e) => setHoldings(e.target.value)}
-                rows={4}
-                placeholder={"Index fund — 30,000\nBrokerage — 12,500"}
-                className="w-full resize-y rounded-lg border border-input bg-card px-3.5 py-3 font-mono text-sm leading-relaxed text-foreground outline-none transition-colors placeholder:text-muted-foreground/60 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
-              />
-
-              {/* Quick add chips */}
-              <div className="mt-1">
-                <p className="mb-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                  Quick add
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {POPULAR_TICKERS.map((ticker) => (
-                    <button
-                      key={ticker}
-                      type="button"
-                      onClick={() => addTicker(ticker)}
-                      className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-2.5 py-1 font-mono text-xs text-secondary-foreground transition-colors hover:border-primary/50 hover:bg-accent hover:text-accent-foreground"
-                    >
-                      <Plus className="size-3 text-primary" aria-hidden="true" />
-                      {ticker}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <HoldingsInput holdings={holdings} onChange={setHoldings} />
             </Field>
 
             <div className="grid gap-6 sm:grid-cols-2">
@@ -189,24 +148,24 @@ export default function FormPage() {
             {/* Risk tolerance */}
             <Field label="Risk tolerance" htmlFor="risk">
               <div className="rounded-lg border border-input bg-card px-4 py-4">
-                <div className="mb-3 flex items-baseline justify-between">
+                <div className="mb-3 flex items-baseline justify-between gap-3">
                   <span className="text-base font-semibold text-primary">
-                    {risk.label}
+                    {riskName}
                   </span>
-                  <span className="text-xs text-muted-foreground">
-                    {risk.blurb}
+                  <span className="text-right text-xs text-muted-foreground">
+                    {RISK_BLURBS[riskName]}
                   </span>
                 </div>
                 <input
                   id="risk"
                   type="range"
                   min={0}
-                  max={2}
+                  max={100}
                   step={1}
-                  value={riskIndex}
-                  onChange={(e) => setRiskIndex(Number(e.target.value))}
+                  value={riskScore}
+                  onChange={(e) => setRiskScore(Number(e.target.value))}
                   className="h-2 w-full cursor-pointer appearance-none rounded-full bg-secondary accent-primary"
-                  aria-valuetext={risk.label}
+                  aria-valuetext={`${riskName} (${riskScore} of 100)`}
                 />
                 <div className="mt-2 flex justify-between font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
                   <span>Low</span>
