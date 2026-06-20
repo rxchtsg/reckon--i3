@@ -29,7 +29,7 @@ export type Projection = {
   scenarios: Record<ScenarioKey, Scenario>
   target: number
   goalMet: boolean
-  surplus: number // base final - target (negative = shortfall)
+  surplus: number // bear final - target (negative = shortfall)
   actions: SuggestedAction[]
 }
 
@@ -132,8 +132,10 @@ export function buildProjection(input: PlanInput): Projection {
     },
   }
 
-  const baseFinal = scenarios.base.finalAmount
-  const surplus = baseFinal - input.target
+  // Headline status reflects the conservative (Bear) case: the goal is only
+  // considered "met" if it holds up even in a downturn.
+  const bearFinal = scenarios.bear.finalAmount
+  const surplus = bearFinal - input.target
   const goalMet = surplus >= 0
 
   const actions = buildActions(input, scenarios, startingPrincipal, months)
