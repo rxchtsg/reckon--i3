@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
+import useSWR from "swr"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -11,6 +12,7 @@ import { GoalCallout } from "@/components/goal-callout"
 import { SuggestedActions } from "@/components/suggested-actions"
 import { PortfolioOptimization } from "@/components/portfolio-optimization"
 import { buildProjection, formatCurrency } from "@/lib/projection"
+import { fetchReturnRates } from "@/lib/returns"
 
 // Shared dark navy→black gradient, identical to the landing page.
 const GRADIENT_BG = {
@@ -21,9 +23,16 @@ const GRADIENT_BG = {
 export default function ResultsPage() {
   const { plan } = usePlan()
 
+  // Live historical-return rates, cached by SWR. Falls back to the fixed
+  // defaults inside buildProjection whenever this is undefined/null.
+  const { data: liveRates } = useSWR("return-rates", fetchReturnRates, {
+    revalidateOnFocus: false,
+    shouldRetryOnError: false,
+  })
+
   const projection = useMemo(
-    () => (plan ? buildProjection(plan) : null),
-    [plan],
+    () => (plan ? buildProjection(plan, liveRates ?? undefined) : null),
+    [plan, liveRates],
   )
 
   if (!plan || !projection) {
@@ -47,10 +56,7 @@ export default function ResultsPage() {
     )
   }
 
-  const targetDate = new Date(plan.targetDate).toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  })
+  const targetAgeLabel = `age ${plan.targetAge}`
 
   return (
     <div className="min-h-screen" style={GRADIENT_BG}>
@@ -65,7 +71,7 @@ export default function ResultsPage() {
             Edit plan
           </Link>
           <p className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
-            Target {formatCurrency(plan.target)} · {targetDate}
+            Target {formatCurrency(plan.target)} · by {targetAgeLabel}
           </p>
         </div>
 
@@ -87,7 +93,7 @@ export default function ResultsPage() {
           <SummaryStat label="Starting" value={formatCurrency(projection.startingPrincipal)} />
           <SummaryStat label="Monthly" value={formatCurrency(plan.monthly)} />
           <SummaryStat label="Risk" value={cap(plan.risk)} />
-          <SummaryStat label="Target date" value={targetDate} />
+          <SummaryStat label="Target age" value={`Age ${plan.targetAge}`} />
         </dl>
 
         {/* Scenarios — supporting detail */}

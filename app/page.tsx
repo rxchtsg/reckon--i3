@@ -35,7 +35,7 @@ const HOW_IT_WORKS: { title: string; description: string }[] = [
   },
   {
     title: "Set your number",
-    description: "Choose a target amount and date.",
+    description: "Choose a target amount and age.",
   },
   {
     title: "See your odds",
@@ -43,20 +43,10 @@ const HOW_IT_WORKS: { title: string; description: string }[] = [
   },
 ]
 
-function defaultTargetDate() {
-  const d = new Date()
-  d.setFullYear(d.getFullYear() + 10)
-  return d.toISOString().slice(0, 10)
-}
-
-function formatDateLabel(iso: string) {
-  const d = new Date(`${iso}T00:00:00`)
-  if (Number.isNaN(d.getTime())) return "—"
-  return d.toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  })
+/** Parse an age input into a whole, non-negative number. */
+function parseAge(value: string): number {
+  const n = Number.parseInt(value, 10)
+  return Number.isFinite(n) && n > 0 ? n : 0
 }
 
 export default function FormPage() {
@@ -70,7 +60,8 @@ export default function FormPage() {
   const [monthly, setMonthly] = useState("1,000")
   const [riskIndex, setRiskIndex] = useState(1)
   const [target, setTarget] = useState("250,000")
-  const [targetDate, setTargetDate] = useState(defaultTargetDate())
+  const [currentAge, setCurrentAge] = useState("30")
+  const [targetAge, setTargetAge] = useState("40")
   const [calculating, setCalculating] = useState(false)
 
   function handleSubmit(e: FormEvent) {
@@ -81,7 +72,8 @@ export default function FormPage() {
       monthly: parseMoney(monthly),
       risk: RISK_LEVELS[riskIndex].value,
       target: parseMoney(target),
-      targetDate,
+      currentAge: parseAge(currentAge),
+      targetAge: parseAge(targetAge),
     })
     // Brief delay so the calculating state is perceptible before navigating.
     setTimeout(() => router.push("/results"), 650)
@@ -102,6 +94,7 @@ export default function FormPage() {
   }
 
   const risk = RISK_LEVELS[riskIndex]
+  const yearsToGoal = Math.max(0, parseAge(targetAge) - parseAge(currentAge))
 
   return (
     <div
@@ -223,17 +216,34 @@ export default function FormPage() {
               </div>
             </Field>
 
-            {/* Target date */}
-            <Field label="Target date" htmlFor="targetDate">
-              <input
-                id="targetDate"
-                type="date"
-                value={targetDate}
-                min={new Date().toISOString().slice(0, 10)}
-                onChange={(e) => setTargetDate(e.target.value)}
-                className="w-full rounded-lg border border-input bg-card px-3.5 py-2.5 text-sm text-foreground outline-none transition-colors [color-scheme:dark] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
-              />
-            </Field>
+            {/* Ages */}
+            <div className="grid gap-6 sm:grid-cols-2">
+              <Field
+                label="Your current age"
+                htmlFor="currentAge"
+                hint={
+                  yearsToGoal > 0
+                    ? `${yearsToGoal} year${yearsToGoal === 1 ? "" : "s"} to your goal.`
+                    : "Target age should be greater than your current age."
+                }
+              >
+                <AgeInput
+                  id="currentAge"
+                  value={currentAge}
+                  onChange={setCurrentAge}
+                  placeholder="30"
+                />
+              </Field>
+
+              <Field label="Age you want to reach this by" htmlFor="targetAge">
+                <AgeInput
+                  id="targetAge"
+                  value={targetAge}
+                  onChange={setTargetAge}
+                  placeholder="40"
+                />
+              </Field>
+            </div>
 
             <Button
               type="submit"
@@ -276,7 +286,10 @@ export default function FormPage() {
                 ${target || "0"}
               </p>
               <p className="mt-1.5 text-sm text-muted-foreground">
-                by {formatDateLabel(targetDate)}
+                by age {parseAge(targetAge) || "—"}
+                {yearsToGoal > 0
+                  ? ` · ${yearsToGoal} year${yearsToGoal === 1 ? "" : "s"} away`
+                  : ""}
               </p>
             </div>
 
@@ -370,5 +383,29 @@ function MoneyInput({
         className="w-full rounded-lg bg-transparent py-2.5 pl-1.5 pr-3.5 font-mono text-sm text-foreground outline-none placeholder:text-muted-foreground/60"
       />
     </div>
+  )
+}
+
+function AgeInput({
+  id,
+  value,
+  onChange,
+  placeholder,
+}: {
+  id: string
+  value: string
+  onChange: (v: string) => void
+  placeholder?: string
+}) {
+  return (
+    <input
+      id={id}
+      type="text"
+      inputMode="numeric"
+      value={value}
+      onChange={(e) => onChange(e.target.value.replace(/\D/g, "").slice(0, 3))}
+      placeholder={placeholder}
+      className="w-full rounded-lg border border-input bg-card px-3.5 py-2.5 font-mono text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground/60 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
+    />
   )
 }
