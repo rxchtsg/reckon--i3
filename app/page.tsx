@@ -1,11 +1,16 @@
 "use client"
 
-import { useRef, useState, type FormEvent } from "react"
+import { useState, type FormEvent } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowRight, Loader2, Plus } from "lucide-react"
+import { ArrowRight, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SiteHeader } from "@/components/site-header"
 import { usePlan } from "@/components/plan-provider"
+import {
+  HoldingsInput,
+  makeEmptyHolding,
+  type Holding,
+} from "@/components/holdings-input"
 import { riskLabel } from "@/lib/projection"
 
 // Short descriptor shown next to the continuous risk-tolerance label.
@@ -16,20 +21,6 @@ const RISK_BLURBS: Record<string, string> = {
   "Medium-High": "Growth-tilted, bigger swings",
   High: "Maximum growth, wider swings",
 }
-
-// Most popular tickers for the quick-add chips.
-const POPULAR_TICKERS = [
-  "VOO",
-  "VTSAX",
-  "AAPL",
-  "MSFT",
-  "NVDA",
-  "GOOGL",
-  "AMZN",
-  "TSLA",
-  "QQQ",
-  "BTC",
-]
 
 const HOW_IT_WORKS: { title: string; description: string }[] = [
   {
@@ -55,11 +46,12 @@ function parseAge(value: string): number {
 export default function FormPage() {
   const router = useRouter()
   const { setPlan } = usePlan()
-  const holdingsRef = useRef<HTMLTextAreaElement>(null)
 
-  const [holdings, setHoldings] = useState(
-    "VTSAX — 42,000\nApple (AAPL) — 8,500\nCash — 5,000",
-  )
+  const [holdings, setHoldings] = useState<Holding[]>(() => [
+    { id: "h1", ticker: "VTSAX", amount: "42,000" },
+    { id: "h2", ticker: "AAPL", amount: "8,500" },
+    makeEmptyHolding(),
+  ])
   const [monthly, setMonthly] = useState("1,000")
   const [riskScore, setRiskScore] = useState(50)
   const [target, setTarget] = useState("250,000")
@@ -70,8 +62,14 @@ export default function FormPage() {
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setCalculating(true)
+    // Serialize structured rows into the "TICKER — amount" lines the
+    // projection's holdings parser already understands.
+    const serialized = holdings
+      .filter((h) => h.amount.trim() !== "")
+      .map((h) => `${h.ticker || "Holding"} — ${h.amount}`)
+      .join("\n")
     setPlan({
-      holdings,
+      holdings: serialized,
       monthly: parseMoney(monthly),
       riskScore,
       target: parseMoney(target),
@@ -80,20 +78,6 @@ export default function FormPage() {
     })
     // Brief delay so the calculating state is perceptible before navigating.
     setTimeout(() => router.push("/results"), 650)
-  }
-
-  // Append "TICKER — " on a new line and place the cursor right after the dash.
-  function addTicker(ticker: string) {
-    const needsBreak = holdings.length > 0 && !holdings.endsWith("\n")
-    const next = `${holdings}${needsBreak ? "\n" : ""}${ticker} — `
-    setHoldings(next)
-    requestAnimationFrame(() => {
-      const el = holdingsRef.current
-      if (!el) return
-      el.focus()
-      el.setSelectionRange(next.length, next.length)
-      el.scrollTop = el.scrollHeight
-    })
   }
 
   const riskName = riskLabel(riskScore)
@@ -133,38 +117,10 @@ export default function FormPage() {
             {/* Holdings */}
             <Field
               label="Current investment holdings"
-              hint="List each position on its own line — we'll total the dollar amounts."
+              hint="Add each position with its ticker and current dollar balance."
               htmlFor="holdings"
             >
-              <textarea
-                ref={holdingsRef}
-                id="holdings"
-                value={holdings}
-                onChange={(e) => setHoldings(e.target.value)}
-                rows={4}
-                placeholder={"Index fund — 30,000\nBrokerage — 12,500"}
-                className="w-full resize-y rounded-lg border border-input bg-card px-3.5 py-3 font-mono text-sm leading-relaxed text-foreground outline-none transition-colors placeholder:text-muted-foreground/60 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
-              />
-
-              {/* Quick add chips */}
-              <div className="mt-1">
-                <p className="mb-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                  Quick add
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {POPULAR_TICKERS.map((ticker) => (
-                    <button
-                      key={ticker}
-                      type="button"
-                      onClick={() => addTicker(ticker)}
-                      className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-2.5 py-1 font-mono text-xs text-secondary-foreground transition-colors hover:border-primary/50 hover:bg-accent hover:text-accent-foreground"
-                    >
-                      <Plus className="size-3 text-primary" aria-hidden="true" />
-                      {ticker}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <HoldingsInput holdings={holdings} onChange={setHoldings} />
             </Field>
 
             <div className="grid gap-6 sm:grid-cols-2">
