@@ -11,7 +11,7 @@ import { ScenarioCard } from "@/components/scenario-card"
 import { GoalCallout } from "@/components/goal-callout"
 import { SuggestedActions } from "@/components/suggested-actions"
 import { PortfolioOptimization } from "@/components/portfolio-optimization"
-import { buildProjection, formatCurrency } from "@/lib/projection"
+import { buildProjection, formatCurrency, riskLabel } from "@/lib/projection"
 import { fetchReturnRates } from "@/lib/returns"
 
 // Shared dark navy→black gradient, identical to the landing page.
@@ -92,7 +92,7 @@ export default function ResultsPage() {
         <dl className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-4">
           <SummaryStat label="Starting" value={formatCurrency(projection.startingPrincipal)} />
           <SummaryStat label="Monthly" value={formatCurrency(plan.monthly)} />
-          <SummaryStat label="Risk" value={cap(plan.risk)} />
+          <SummaryStat label="Risk" value={`${riskLabel(plan.riskScore)} · ${Math.round(plan.riskScore)}`} />
           <SummaryStat label="Target age" value={`Age ${plan.targetAge}`} />
         </dl>
 
@@ -142,8 +142,4 @@ function SummaryStat({ label, value }: { label: string; value: string }) {
       </dd>
     </div>
   )
-}
-
-function cap(s: string) {
-  return s.charAt(0).toUpperCase() + s.slice(1)
 }

@@ -6,13 +6,16 @@ import { ArrowRight, Loader2, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SiteHeader } from "@/components/site-header"
 import { usePlan } from "@/components/plan-provider"
-import type { Risk } from "@/lib/projection"
+import { riskLabel } from "@/lib/projection"
 
-const RISK_LEVELS: { value: Risk; label: string; blurb: string }[] = [
-  { value: "low", label: "Low", blurb: "Capital preservation, steadier returns" },
-  { value: "medium", label: "Medium", blurb: "Balanced growth and volatility" },
-  { value: "high", label: "High", blurb: "Maximum growth, wider swings" },
-]
+// Short descriptor shown next to the continuous risk-tolerance label.
+const RISK_BLURBS: Record<string, string> = {
+  Low: "Capital preservation, steadier returns",
+  "Low-Medium": "Mostly defensive with some growth",
+  Medium: "Balanced growth and volatility",
+  "Medium-High": "Growth-tilted, bigger swings",
+  High: "Maximum growth, wider swings",
+}
 
 // Most popular tickers for the quick-add chips.
 const POPULAR_TICKERS = [
@@ -58,7 +61,7 @@ export default function FormPage() {
     "VTSAX — 42,000\nApple (AAPL) — 8,500\nCash — 5,000",
   )
   const [monthly, setMonthly] = useState("1,000")
-  const [riskIndex, setRiskIndex] = useState(1)
+  const [riskScore, setRiskScore] = useState(50)
   const [target, setTarget] = useState("250,000")
   const [currentAge, setCurrentAge] = useState("30")
   const [targetAge, setTargetAge] = useState("40")
@@ -70,7 +73,7 @@ export default function FormPage() {
     setPlan({
       holdings,
       monthly: parseMoney(monthly),
-      risk: RISK_LEVELS[riskIndex].value,
+      riskScore,
       target: parseMoney(target),
       currentAge: parseAge(currentAge),
       targetAge: parseAge(targetAge),
@@ -93,7 +96,7 @@ export default function FormPage() {
     })
   }
 
-  const risk = RISK_LEVELS[riskIndex]
+  const riskName = riskLabel(riskScore)
   const yearsToGoal = Math.max(0, parseAge(targetAge) - parseAge(currentAge))
 
   return (
@@ -189,24 +192,24 @@ export default function FormPage() {
             {/* Risk tolerance */}
             <Field label="Risk tolerance" htmlFor="risk">
               <div className="rounded-lg border border-input bg-card px-4 py-4">
-                <div className="mb-3 flex items-baseline justify-between">
+                <div className="mb-3 flex items-baseline justify-between gap-3">
                   <span className="text-base font-semibold text-primary">
-                    {risk.label}
+                    {riskName}
                   </span>
-                  <span className="text-xs text-muted-foreground">
-                    {risk.blurb}
+                  <span className="text-right text-xs text-muted-foreground">
+                    {RISK_BLURBS[riskName]}
                   </span>
                 </div>
                 <input
                   id="risk"
                   type="range"
                   min={0}
-                  max={2}
+                  max={100}
                   step={1}
-                  value={riskIndex}
-                  onChange={(e) => setRiskIndex(Number(e.target.value))}
+                  value={riskScore}
+                  onChange={(e) => setRiskScore(Number(e.target.value))}
                   className="h-2 w-full cursor-pointer appearance-none rounded-full bg-secondary accent-primary"
-                  aria-valuetext={risk.label}
+                  aria-valuetext={`${riskName} (${riskScore} of 100)`}
                 />
                 <div className="mt-2 flex justify-between font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
                   <span>Low</span>
