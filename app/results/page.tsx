@@ -107,8 +107,18 @@ export default function ResultsPage() {
               Projected final amount over {projection.years.toFixed(1)} years.
             </p>
             {!ratesLoading && (
-              <span className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-muted-foreground/50">
-                {liveRates ? "· Live market data" : "· Fixed estimates"}
+              <span
+                className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${
+                  liveRates
+                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                    : "border-border bg-secondary text-muted-foreground"
+                }`}
+              >
+                <span
+                  className={`size-1.5 rounded-full ${liveRates ? "bg-emerald-400" : "bg-muted-foreground/50"}`}
+                  aria-hidden="true"
+                />
+                {liveRates ? "Live market data" : "Historical averages"}
               </span>
             )}
           </div>
