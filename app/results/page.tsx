@@ -49,17 +49,23 @@ export default function ResultsPage() {
     <div className="min-h-screen">
       <SiteHeader />
       <main className="mx-auto max-w-3xl px-5 py-10 sm:py-14">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ArrowLeft className="size-4" aria-hidden="true" />
-          Edit plan
-        </Link>
+        <div className="flex items-center justify-between gap-4">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="size-4" aria-hidden="true" />
+            Edit plan
+          </Link>
+          <p className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
+            Target {formatCurrency(plan.target)} · {targetDate}
+          </p>
+        </div>
 
-        <h1 className="mt-5 text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
-          Your projection to {formatCurrency(plan.target)}
-        </h1>
+        {/* Callout — the hero message everything else supports */}
+        <div className="mt-6">
+          <GoalCallout projection={projection} />
+        </div>
 
         {/* Summary strip */}
         <dl className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-4">
@@ -69,16 +75,14 @@ export default function ResultsPage() {
           <SummaryStat label="Target date" value={targetDate} />
         </dl>
 
-        {/* Callout */}
-        <div className="mt-8">
-          <GoalCallout projection={projection} />
-        </div>
-
-        {/* Scenarios */}
-        <div className="mt-8">
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            Projected final amount · {projection.years.toFixed(1)} years
+        {/* Scenarios — supporting detail */}
+        <div className="mt-12">
+          <h2 className="mb-1 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            How each scenario plays out
           </h2>
+          <p className="mb-4 text-sm text-muted-foreground">
+            Projected final amount over {projection.years.toFixed(1)} years.
+          </p>
           <div className="grid gap-4 sm:grid-cols-3">
             <ScenarioCard scenario={projection.scenarios.bear} target={plan.target} />
             <ScenarioCard scenario={projection.scenarios.base} target={plan.target} highlight />

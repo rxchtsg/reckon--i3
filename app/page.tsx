@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowRight, TrendingUp } from "lucide-react"
+import { ArrowRight, Loader2, TrendingUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SiteHeader } from "@/components/site-header"
 import { usePlan } from "@/components/plan-provider"
@@ -27,21 +27,24 @@ export default function FormPage() {
   const [holdings, setHoldings] = useState(
     "VTSAX — 42,000\nApple (AAPL) — 8,500\nCash — 5,000",
   )
-  const [monthly, setMonthly] = useState("1000")
+  const [monthly, setMonthly] = useState("1,000")
   const [riskIndex, setRiskIndex] = useState(1)
-  const [target, setTarget] = useState("250000")
+  const [target, setTarget] = useState("250,000")
   const [targetDate, setTargetDate] = useState(defaultTargetDate())
+  const [calculating, setCalculating] = useState(false)
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
+    setCalculating(true)
     setPlan({
       holdings,
-      monthly: Number.parseFloat(monthly) || 0,
+      monthly: parseMoney(monthly),
       risk: RISK_LEVELS[riskIndex].value,
-      target: Number.parseFloat(target) || 0,
+      target: parseMoney(target),
       targetDate,
     })
-    router.push("/results")
+    // Brief delay so the calculating state is perceptible before navigating.
+    setTimeout(() => router.push("/results"), 650)
   }
 
   const risk = RISK_LEVELS[riskIndex]
@@ -59,9 +62,8 @@ export default function FormPage() {
             Will you reach your number?
           </h1>
           <p className="mt-3 text-pretty leading-relaxed text-muted-foreground">
-            Tell Reckon what you hold and where you want to be. We&apos;ll model
-            Bear, Base, and Bull scenarios and show you exactly how to close any
-            gap.
+            Tell Reckon what you hold and where you want to be. We&apos;ll show
+            you exactly how close you are, and how to close any gap.
           </p>
         </div>
 
@@ -149,10 +151,21 @@ export default function FormPage() {
           <Button
             type="submit"
             size="lg"
+            disabled={calculating}
+            aria-busy={calculating}
             className="mt-2 h-12 w-full text-base font-semibold"
           >
-            Run my projection
-            <ArrowRight className="size-4.5" aria-hidden="true" />
+            {calculating ? (
+              <>
+                <Loader2 className="size-4.5 animate-spin" aria-hidden="true" />
+                Calculating projection…
+              </>
+            ) : (
+              <>
+                Run my projection
+                <ArrowRight className="size-4.5" aria-hidden="true" />
+              </>
+            )}
           </Button>
         </form>
       </main>
@@ -182,6 +195,20 @@ function Field({
   )
 }
 
+/** Strip formatting and parse a money string into a number. */
+function parseMoney(value: string): number {
+  return Number.parseFloat(value.replace(/,/g, "")) || 0
+}
+
+/** Add thousands separators while preserving an in-progress decimal. */
+function formatWithCommas(raw: string): string {
+  const cleaned = raw.replace(/[^\d.]/g, "")
+  if (cleaned === "") return ""
+  const [intPart, ...rest] = cleaned.split(".")
+  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+  return rest.length > 0 ? `${grouped}.${rest.join("")}` : grouped
+}
+
 function MoneyInput({
   id,
   value,
@@ -201,7 +228,7 @@ function MoneyInput({
         type="text"
         inputMode="decimal"
         value={value}
-        onChange={(e) => onChange(e.target.value.replace(/[^\d.,]/g, ""))}
+        onChange={(e) => onChange(formatWithCommas(e.target.value))}
         placeholder={placeholder}
         className="w-full rounded-lg bg-transparent py-2.5 pl-1.5 pr-3.5 font-mono text-sm text-foreground outline-none placeholder:text-muted-foreground/60"
       />

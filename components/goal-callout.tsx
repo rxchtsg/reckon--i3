@@ -7,59 +7,71 @@ export function GoalCallout({ projection }: { projection: Projection }) {
   const amount = Math.abs(surplus)
 
   return (
-    <div
+    <section
+      aria-live="polite"
       className={cn(
-        "flex flex-col gap-4 rounded-xl border p-6 sm:flex-row sm:items-center",
+        "relative overflow-hidden rounded-2xl border-2 p-7 sm:p-9",
         goalMet
-          ? "border-primary/40 bg-primary/[0.07]"
-          : "border-destructive/40 bg-destructive/[0.08]",
+          ? "border-primary/50 bg-primary/[0.08]"
+          : "border-destructive/50 bg-destructive/[0.09]",
       )}
     >
-      <span
-        className={cn(
-          "flex size-12 shrink-0 items-center justify-center rounded-full",
-          goalMet
-            ? "bg-primary/15 text-primary"
-            : "bg-destructive/15 text-destructive",
-        )}
-      >
-        {goalMet ? (
-          <CheckCircle2 className="size-6" aria-hidden="true" />
-        ) : (
-          <AlertTriangle className="size-6" aria-hidden="true" />
-        )}
-      </span>
-
-      <div className="flex-1">
-        <h2 className="text-lg font-semibold tracking-tight">
-          {goalMet ? "You're on track to hit your goal" : "You're facing a shortfall"}
-        </h2>
-        <p className="mt-1 text-pretty text-sm leading-relaxed text-muted-foreground">
-          In the Base scenario your portfolio reaches{" "}
-          <span className="font-medium text-foreground">
-            {formatCurrency(scenarios.base.finalAmount)}
-          </span>
-          {goalMet ? (
-            <>
-              {" "}
-              — about{" "}
-              <span className="font-medium text-primary">
-                {formatCurrency(amount)}
-              </span>{" "}
-              past your {formatCurrency(target)} target.
-            </>
-          ) : (
-            <>
-              {" "}
-              — roughly{" "}
-              <span className="font-medium text-destructive">
-                {formatCurrency(amount)}
-              </span>{" "}
-              short of your {formatCurrency(target)} target.
-            </>
+      <div className="flex items-center gap-3">
+        <span
+          className={cn(
+            "flex size-11 shrink-0 items-center justify-center rounded-full",
+            goalMet
+              ? "bg-primary/15 text-primary"
+              : "bg-destructive/15 text-destructive",
           )}
-        </p>
+        >
+          {goalMet ? (
+            <CheckCircle2 className="size-6" aria-hidden="true" />
+          ) : (
+            <AlertTriangle className="size-6" aria-hidden="true" />
+          )}
+        </span>
+        <span
+          className={cn(
+            "font-mono text-xs font-medium uppercase tracking-[0.2em]",
+            goalMet ? "text-primary" : "text-destructive",
+          )}
+        >
+          {goalMet ? "On track" : "Shortfall"}
+        </span>
       </div>
-    </div>
+
+      <h2 className="mt-5 text-balance text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
+        {goalMet
+          ? "You're on track to hit your goal"
+          : "You're facing a shortfall"}
+      </h2>
+
+      <p className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span
+          className={cn(
+            "font-mono text-4xl font-bold tracking-tight sm:text-5xl",
+            goalMet ? "text-primary" : "text-destructive",
+          )}
+        >
+          {goalMet ? "+" : "−"}
+          {formatCurrency(amount)}
+        </span>
+        <span className="text-base text-muted-foreground">
+          {goalMet ? "past your target" : "below your target"}
+        </span>
+      </p>
+
+      <p className="mt-4 max-w-xl text-pretty leading-relaxed text-muted-foreground">
+        In the Base scenario your portfolio reaches{" "}
+        <span className="font-medium text-foreground">
+          {formatCurrency(scenarios.base.finalAmount)}
+        </span>{" "}
+        against your {formatCurrency(target)} target
+        {goalMet
+          ? " — comfortably clearing your number."
+          : " — leaving a gap to close. See the suggested actions below."}
+      </p>
+    </section>
   )
 }
