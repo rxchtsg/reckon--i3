@@ -10,10 +10,10 @@ export function GoalCallout({ projection }: { projection: Projection }) {
     <section
       aria-live="polite"
       className={cn(
-        "relative overflow-hidden rounded-2xl border-2 p-7 sm:p-9",
+        "relative overflow-hidden rounded-xl border p-7 sm:p-9",
         goalMet
-          ? "border-primary/50 bg-primary/[0.08]"
-          : "border-destructive/50 bg-destructive/[0.09]",
+          ? "border-primary/30 bg-primary/[0.07]"
+          : "border-destructive/30 bg-destructive/[0.08]",
       )}
     >
       <div className="flex items-center gap-3">
@@ -41,7 +41,7 @@ export function GoalCallout({ projection }: { projection: Projection }) {
         </span>
       </div>
 
-      <h2 className="mt-5 text-balance text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
+      <h2 className="mt-5 text-balance text-4xl font-bold leading-tight tracking-tight sm:text-5xl">
         {goalMet
           ? "You're on track to hit your goal"
           : "You're facing a shortfall"}

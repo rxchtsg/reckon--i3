@@ -5,7 +5,8 @@ export type PlanInput = {
   monthly: number
   risk: Risk
   target: number
-  targetDate: string // ISO yyyy-mm-dd
+  currentAge: number
+  targetAge: number
 }
 
 export type ScenarioKey = "bear" | "base" | "bull"
@@ -33,8 +34,12 @@ export type Projection = {
   actions: SuggestedAction[]
 }
 
-// Annual return assumptions per risk band: [bear, base, bull]
-const RATES: Record<Risk, { bear: number; base: number; bull: number }> = {
+export type ScenarioRates = { bear: number; base: number; bull: number }
+export type RiskRates = Record<Risk, ScenarioRates>
+
+// Fixed fallback annual return assumptions per risk band: [bear, base, bull].
+// Used whenever live historical data is unavailable.
+export const DEFAULT_RATES: RiskRates = {
   low: { bear: 0.01, base: 0.04, bull: 0.07 },
   medium: { bear: 0.0, base: 0.07, bull: 0.11 },
   high: { bear: -0.03, base: 0.1, bull: 0.16 },
@@ -53,15 +58,10 @@ export function parseHoldings(holdings: string): number {
   }, 0)
 }
 
-/** Months from today (inclusive of partial) until the target date. */
-export function monthsUntil(targetDate: string): number {
-  const now = new Date()
-  const end = new Date(targetDate)
-  if (Number.isNaN(end.getTime())) return 0
-  const months =
-    (end.getFullYear() - now.getFullYear()) * 12 +
-    (end.getMonth() - now.getMonth())
-  return Math.max(0, months)
+/** Whole months implied by the gap between current age and target age. */
+export function monthsFromAges(currentAge: number, targetAge: number): number {
+  const years = Math.max(0, targetAge - currentAge)
+  return Math.round(years * 12)
 }
 
 /** Future value of a principal plus recurring monthly contributions. */
@@ -105,11 +105,14 @@ export function formatCurrency(value: number): string {
   }).format(Math.round(value))
 }
 
-export function buildProjection(input: PlanInput): Projection {
+export function buildProjection(
+  input: PlanInput,
+  riskRates: RiskRates = DEFAULT_RATES,
+): Projection {
   const startingPrincipal = parseHoldings(input.holdings)
-  const months = monthsUntil(input.targetDate)
+  const months = monthsFromAges(input.currentAge, input.targetAge)
   const years = months / 12
-  const rates = RATES[input.risk]
+  const rates = riskRates[input.risk]
 
   const scenarios: Record<ScenarioKey, Scenario> = {
     bear: {
@@ -138,7 +141,7 @@ export function buildProjection(input: PlanInput): Projection {
   const surplus = bearFinal - input.target
   const goalMet = surplus >= 0
 
-  const actions = buildActions(input, scenarios, startingPrincipal, months)
+  const actions = buildActions(input, scenarios, startingPrincipal, months, riskRates)
 
   return {
     startingPrincipal,
@@ -157,6 +160,7 @@ function buildActions(
   scenarios: Record<ScenarioKey, Scenario>,
   principal: number,
   months: number,
+  riskRates: RiskRates,
 ): SuggestedAction[] {
   const actions: SuggestedAction[] = []
   const gap = input.target - scenarios.base.finalAmount
@@ -204,7 +208,7 @@ function buildActions(
   const idx = RISK_ORDER.indexOf(input.risk)
   if (idx < RISK_ORDER.length - 1) {
     const nextRisk = RISK_ORDER[idx + 1]
-    const nextBase = RATES[nextRisk].base
+    const nextBase = riskRates[nextRisk].base
     const projected = futureValue(principal, input.monthly, nextBase, months)
     actions.push({
       title: `Shift toward a ${nextRisk}-risk allocation`,
