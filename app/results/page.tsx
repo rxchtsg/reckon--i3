@@ -9,6 +9,7 @@ import { usePlan } from "@/components/plan-provider"
 import { ScenarioCard } from "@/components/scenario-card"
 import { GoalCallout } from "@/components/goal-callout"
 import { SuggestedActions } from "@/components/suggested-actions"
+import { PortfolioOptimization } from "@/components/portfolio-optimization"
 import { buildProjection, formatCurrency } from "@/lib/projection"
 
 export default function ResultsPage() {
@@ -93,6 +94,11 @@ export default function ResultsPage() {
         {/* Actions */}
         <div className="mt-10">
           <SuggestedActions actions={projection.actions} goalMet={projection.goalMet} />
+        </div>
+
+        {/* Portfolio optimization upsell */}
+        <div className="mt-8">
+          <PortfolioOptimization />
         </div>
 
         <p className="mt-10 text-pretty text-xs leading-relaxed text-muted-foreground">
