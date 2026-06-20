@@ -3,7 +3,7 @@ import { ArrowRight, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 // TODO: replace with live dashboard URL
-const OPTIMIZATION_URL = "#"
+const OPTIMIZATION_URL = "/optimization"
 
 // Placeholder allocation weights — purely illustrative, not real data.
 const SEGMENTS = [
