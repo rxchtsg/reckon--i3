@@ -63,13 +63,13 @@ export function GoalCallout({ projection }: { projection: Projection }) {
       </p>
 
       <p className="mt-4 max-w-xl text-pretty leading-relaxed text-muted-foreground">
-        In the Base scenario your portfolio reaches{" "}
+        Even in the conservative Bear scenario your portfolio reaches{" "}
         <span className="font-medium text-foreground">
-          {formatCurrency(scenarios.base.finalAmount)}
+          {formatCurrency(scenarios.bear.finalAmount)}
         </span>{" "}
         against your {formatCurrency(target)} target
         {goalMet
-          ? " — comfortably clearing your number."
+          ? " — so you clear your number even if markets disappoint."
           : " — leaving a gap to close. See the suggested actions below."}
       </p>
     </section>
