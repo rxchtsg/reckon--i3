@@ -23,8 +23,6 @@ const TICKERS: { symbol: string; name: string }[] = [
   { symbol: "NVDA", name: "NVIDIA Corp." },
   { symbol: "TSLA", name: "Tesla Inc." },
   { symbol: "META", name: "Meta Platforms Inc." },
-  { symbol: "BTC", name: "Bitcoin" },
-  { symbol: "ETH", name: "Ethereum" },
 ]
 
 // Restrained palette drawn from the app's chart tokens for the letter badges.
