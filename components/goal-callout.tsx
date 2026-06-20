@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils"
 import { formatCurrency, type Projection } from "@/lib/projection"
 
 export function GoalCallout({ projection }: { projection: Projection }) {
-  const { goalMet, surplus, target, scenarios } = projection
+  const { goalMet, surplus } = projection
   const amount = Math.abs(surplus)
 
   return (
@@ -63,14 +63,7 @@ export function GoalCallout({ projection }: { projection: Projection }) {
       </p>
 
       <p className="mt-4 max-w-xl text-pretty leading-relaxed text-muted-foreground">
-        Even in the conservative Bear scenario your portfolio reaches{" "}
-        <span className="font-medium text-foreground">
-          {formatCurrency(scenarios.bear.finalAmount)}
-        </span>{" "}
-        against your {formatCurrency(target)} target
-        {goalMet
-          ? " — so you clear your number even if markets disappoint."
-          : " — leaving a gap to close. See the suggested actions below."}
+        {projection.rationale}
       </p>
     </section>
   )
