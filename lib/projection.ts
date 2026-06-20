@@ -263,7 +263,6 @@ function buildActions(
   if (gap <= 0) {
     // On track — give optimizing suggestions instead of gap-closers.
     const surplus = scenarios.base.finalAmount - input.target
-    console.log("[reckon] actions calc:", { scenario: "on-track", baseSurplus: Math.round(surplus) })
     actions.push({
       title: "You're on pace — protect the plan",
       detail: `Your Base scenario clears the target by ${formatCurrency(surplus)}. Keep contributions automatic so you don't drift off track.`,
@@ -309,12 +308,6 @@ function buildActions(
     riskRates,
     input.riskScore,
   )
-  console.log("[reckon] actions calc:", {
-    scenario: "shortfall",
-    neededMonthly: Math.round(needMonthly),
-    extraMonths,
-    targetRiskScore: targetScore,
-  })
   if (targetScore !== null) {
     const newBase = ratesForScore(targetScore, riskRates).base
     const projected = futureValue(principal, input.monthly, newBase, months)
