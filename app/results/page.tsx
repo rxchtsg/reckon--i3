@@ -113,7 +113,7 @@ export default function ResultsPage() {
 
         {/* Actions */}
         <div className="mt-10">
-          <SuggestedActions actions={projection.actions} goalMet={projection.goalMet} />
+          <SuggestedActions actions={projection.actions} goalMet={projection.baseGoalMet} />
         </div>
 
         {/* Portfolio optimization upsell */}

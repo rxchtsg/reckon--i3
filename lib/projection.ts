@@ -30,6 +30,7 @@ export type Projection = {
   scenarios: Record<ScenarioKey, Scenario>
   target: number
   goalMet: boolean
+  baseGoalMet: boolean // base (most likely) final >= target — drives action framing
   surplus: number // bear final - target (negative = shortfall)
   actions: SuggestedAction[]
 }
@@ -168,6 +169,10 @@ export function buildProjection(
   const surplus = bearFinal - input.target
   const goalMet = surplus >= 0
 
+  // The suggested actions are framed around the Base (most likely) outcome, so
+  // the action heading must use the same measure to stay consistent.
+  const baseGoalMet = scenarios.base.finalAmount >= input.target
+
   const actions = buildActions(input, scenarios, startingPrincipal, months, riskRates)
 
   return {
@@ -177,6 +182,7 @@ export function buildProjection(
     scenarios,
     target: input.target,
     goalMet,
+    baseGoalMet,
     surplus,
     actions,
   }

@@ -39,21 +39,25 @@ export function ScenarioCard({
   return (
     <div
       className={cn(
-        "flex flex-col rounded-xl border p-5",
+        "flex flex-col rounded-xl border p-5 sm:p-6",
         highlight ? META.base.ring : "border-border bg-card",
       )}
     >
-      <div className="flex items-center justify-between">
+      {/* Reserved badge row — keeps the figures below aligned across all cards */}
+      <div className="mb-3 flex h-5 items-center">
+        {highlight ? (
+          <span className="inline-flex items-center rounded-full bg-primary/15 px-2 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wider text-primary">
+            Most likely
+          </span>
+        ) : null}
+      </div>
+
+      <div className="flex items-center justify-between gap-3">
         <span className="flex items-center gap-2 text-sm font-medium">
-          <Icon className={cn("size-4", meta.accent)} aria-hidden="true" />
+          <Icon className={cn("size-4 shrink-0", meta.accent)} aria-hidden="true" />
           {scenario.label}
-          {highlight ? (
-            <span className="rounded-full bg-primary/15 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-primary">
-              Most likely
-            </span>
-          ) : null}
         </span>
-        <span className={cn("font-mono text-xs", meta.accent)}>
+        <span className={cn("shrink-0 font-mono text-xs", meta.accent)}>
           {scenario.annualRate >= 0 ? "+" : ""}
           {(scenario.annualRate * 100).toFixed(0)}%/yr
         </span>

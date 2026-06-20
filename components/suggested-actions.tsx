@@ -21,16 +21,16 @@ export function SuggestedActions({
         {actions.map((action, i) => (
           <li
             key={action.title}
-            className="flex gap-4 rounded-xl border border-border bg-card p-4"
+            className="flex gap-4 rounded-xl border border-border bg-card p-4 sm:p-5"
           >
             <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-secondary font-mono text-sm font-medium text-foreground">
               {i + 1}
             </span>
-            <div>
-              <h3 className="text-sm font-medium text-foreground">
+            <div className="min-w-0 pr-1">
+              <h3 className="text-sm font-medium leading-snug text-foreground">
                 {action.title}
               </h3>
-              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+              <p className="mt-1.5 text-sm leading-relaxed text-pretty text-muted-foreground">
                 {action.detail}
               </p>
             </div>
