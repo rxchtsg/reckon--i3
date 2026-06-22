@@ -14,7 +14,7 @@ const SEGMENTS = [
 
 export function PortfolioOptimization() {
   return (
-    <section className="overflow-hidden rounded-2xl border border-border bg-secondary/40">
+    <section className="glass-card glass-card-glow overflow-hidden rounded-2xl transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-black/30">
       <div className="flex flex-col gap-6 p-6 sm:flex-row sm:items-center sm:gap-8">
         <AllocationRing />
 

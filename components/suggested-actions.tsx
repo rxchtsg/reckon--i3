@@ -21,7 +21,7 @@ export function SuggestedActions({
         {actions.map((action, i) => (
           <li
             key={action.title}
-            className="flex gap-4 rounded-xl border border-border bg-card p-4 sm:p-5"
+            className="glass-card flex gap-4 rounded-xl p-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/25 sm:p-5"
           >
             <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-secondary font-mono text-sm font-medium text-foreground">
               {i + 1}

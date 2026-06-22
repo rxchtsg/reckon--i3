@@ -43,8 +43,10 @@ export function ScenarioCard({
   return (
     <div
       className={cn(
-        "flex flex-col rounded-xl border p-5 sm:p-6",
-        highlight ? META.base.ring : "border-border bg-card",
+        "flex flex-col rounded-xl p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/30 sm:p-6",
+        highlight
+          ? "glass-card glass-card-glow border-primary/40 bg-primary/[0.06]"
+          : "glass-card",
       )}
     >
       {/* Reserved badge row — keeps the figures below aligned across all cards */}

@@ -60,7 +60,10 @@ export function GoalCallout({ projection }: { projection: Projection }) {
   return (
     <section
       aria-live="polite"
-      className={cn("relative overflow-hidden rounded-xl border p-7 sm:p-9", cfg.section)}
+      className={cn(
+        "relative overflow-hidden rounded-xl border p-7 backdrop-blur-xl [box-shadow:inset_0_1px_0_0_oklch(1_0_0_/_7%),0_18px_50px_-22px_oklch(0_0_0_/_0.6)] sm:p-9",
+        cfg.section,
+      )}
     >
       <div className="flex items-center gap-3">
         <span
