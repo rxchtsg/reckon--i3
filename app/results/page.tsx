@@ -3,15 +3,16 @@
 import { useMemo } from "react"
 import useSWR from "swr"
 import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, ArrowLeftRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SiteHeader } from "@/components/site-header"
 import { usePlan } from "@/components/plan-provider"
+import { useCurrency } from "@/components/currency-provider"
 import { ScenarioCard } from "@/components/scenario-card"
 import { GoalCallout } from "@/components/goal-callout"
 import { SuggestedActions } from "@/components/suggested-actions"
 import { PortfolioOptimization } from "@/components/portfolio-optimization"
-import { buildProjection, formatCurrency, riskLabel } from "@/lib/projection"
+import { buildProjection, riskLabel } from "@/lib/projection"
 import { fetchReturnRates } from "@/lib/returns"
 
 // Shared dark navy→black gradient, identical to the landing page.
@@ -22,6 +23,7 @@ const GRADIENT_BG = {
 
 export default function ResultsPage() {
   const { plan } = usePlan()
+  const { format, isUsd, currency } = useCurrency()
 
   // Live historical-return rates, cached by SWR. Falls back to the fixed
   // defaults inside buildProjection whenever this is undefined/null.
@@ -31,9 +33,11 @@ export default function ResultsPage() {
     { revalidateOnFocus: false, shouldRetryOnError: false },
   )
 
+  // Pass the currency-aware formatter so the generated rationale and action
+  // copy convert their baked-in amounts along with the headline figures.
   const projection = useMemo(
-    () => (plan ? buildProjection(plan, liveRates ?? undefined) : null),
-    [plan, liveRates],
+    () => (plan ? buildProjection(plan, liveRates ?? undefined, format) : null),
+    [plan, liveRates, format],
   )
 
   if (!plan || !projection) {
@@ -72,7 +76,7 @@ export default function ResultsPage() {
             Edit plan
           </Link>
           <p className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
-            Target {formatCurrency(plan.target)} · by {targetAgeLabel}
+            Target {format(plan.target)} · by {targetAgeLabel}
           </p>
         </div>
 
@@ -89,10 +93,17 @@ export default function ResultsPage() {
           <GoalCallout projection={projection} />
         </div>
 
+        {/* Conversion note — shown only when a non-USD currency is active */}
+        {!isUsd ? (
+          <div className="mt-4 flex justify-end">
+            <ConversionNote code={currency.code} />
+          </div>
+        ) : null}
+
         {/* Summary strip */}
         <dl className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-4">
-          <SummaryStat label="Starting" value={formatCurrency(projection.startingPrincipal)} />
-          <SummaryStat label="Monthly" value={formatCurrency(plan.monthly)} />
+          <SummaryStat label="Starting" value={format(projection.startingPrincipal)} />
+          <SummaryStat label="Monthly" value={format(plan.monthly)} />
           <SummaryStat label="Risk" value={`${riskLabel(plan.riskScore)} · ${Math.round(plan.riskScore)}`} />
           <SummaryStat label="Target age" value={`Age ${plan.targetAge}`} />
         </dl>
@@ -146,6 +157,15 @@ export default function ResultsPage() {
         </p>
       </main>
     </div>
+  )
+}
+
+function ConversionNote({ code }: { code: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card/60 px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+      <ArrowLeftRight className="size-3" aria-hidden="true" />
+      Converting from USD → {code}
+    </span>
   )
 }
 

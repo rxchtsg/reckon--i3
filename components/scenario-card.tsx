@@ -1,6 +1,9 @@
+"use client"
+
 import { TrendingDown, Minus, TrendingUp } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { formatCurrency, type Scenario } from "@/lib/projection"
+import { type Scenario } from "@/lib/projection"
+import { useCurrency } from "@/components/currency-provider"
 
 const META: Record<
   Scenario["key"],
@@ -32,6 +35,7 @@ export function ScenarioCard({
   target: number
   highlight?: boolean
 }) {
+  const { format } = useCurrency()
   const meta = META[scenario.key]
   const Icon = meta.icon
   const meetsTarget = scenario.finalAmount >= target
@@ -64,17 +68,17 @@ export function ScenarioCard({
       </div>
 
       <p className="mt-4 font-mono text-2xl font-semibold tracking-tight sm:text-3xl">
-        {formatCurrency(scenario.finalAmount)}
+        {format(scenario.finalAmount)}
       </p>
 
       <p className="mt-2 text-xs text-muted-foreground">
         {meetsTarget ? (
           <span className="text-primary">
-            {formatCurrency(scenario.finalAmount - target)} above target
+            {format(scenario.finalAmount - target)} above target
           </span>
         ) : (
           <span className="text-muted-foreground">
-            {formatCurrency(target - scenario.finalAmount)} short of target
+            {format(target - scenario.finalAmount)} short of target
           </span>
         )}
       </p>

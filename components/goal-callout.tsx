@@ -1,6 +1,9 @@
+"use client"
+
 import { CheckCircle2, AlertTriangle, AlertCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { formatCurrency, type Projection } from "@/lib/projection"
+import { type Projection } from "@/lib/projection"
+import { useCurrency } from "@/components/currency-provider"
 
 type Tier = "on-track" | "at-risk" | "shortfall"
 
@@ -47,6 +50,7 @@ const TIER_CONFIG = {
 } as const
 
 export function GoalCallout({ projection }: { projection: Projection }) {
+  const { format } = useCurrency()
   const { surplus } = projection
   const tier = getTier(projection)
   const cfg = TIER_CONFIG[tier]
@@ -89,7 +93,7 @@ export function GoalCallout({ projection }: { projection: Projection }) {
           )}
         >
           {cfg.amountPrefix}
-          {formatCurrency(amount)}
+          {format(amount)}
         </span>
         <span className="text-base text-muted-foreground">{cfg.amountSuffix}</span>
       </p>
