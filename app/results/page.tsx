@@ -6,6 +6,9 @@ import Link from "next/link"
 import { ArrowLeft, ArrowLeftRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SiteHeader } from "@/components/site-header"
+import { Reveal } from "@/components/reveal"
+import { ReckonLoader } from "@/components/reckon-loader"
+import { ShareResults } from "@/components/share-results"
 import { usePlan } from "@/components/plan-provider"
 import { useCurrency } from "@/components/currency-provider"
 import { ScenarioCard } from "@/components/scenario-card"
@@ -89,9 +92,9 @@ export default function ResultsPage() {
         </div>
 
         {/* Callout — the hero message everything else supports */}
-        <div className="mt-5">
+        <Reveal className="mt-5">
           <GoalCallout projection={projection} />
-        </div>
+        </Reveal>
 
         {/* Conversion note — shown only when a non-USD currency is active */}
         {!isUsd ? (
@@ -100,13 +103,20 @@ export default function ResultsPage() {
           </div>
         ) : null}
 
+        {/* Share — generates a screenshot-ready summary card */}
+        <Reveal delay={80} className="mt-5">
+          <ShareResults plan={plan} projection={projection} format={format} />
+        </Reveal>
+
         {/* Summary strip */}
-        <dl className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-4">
-          <SummaryStat label="Starting" value={format(projection.startingPrincipal)} />
-          <SummaryStat label="Monthly" value={format(plan.monthly)} />
-          <SummaryStat label="Risk" value={`${riskLabel(plan.riskScore)} · ${Math.round(plan.riskScore)}`} />
-          <SummaryStat label="Target age" value={`Age ${plan.targetAge}`} />
-        </dl>
+        <Reveal delay={140}>
+          <dl className="glass-card mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-xl sm:grid-cols-4">
+            <SummaryStat label="Starting" value={format(projection.startingPrincipal)} />
+            <SummaryStat label="Monthly" value={format(plan.monthly)} />
+            <SummaryStat label="Risk" value={`${riskLabel(plan.riskScore)} · ${Math.round(plan.riskScore)}`} />
+            <SummaryStat label="Target age" value={`Age ${plan.targetAge}`} />
+          </dl>
+        </Reveal>
 
         {/* Scenarios — supporting detail */}
         <div className="mt-12">
@@ -133,22 +143,35 @@ export default function ResultsPage() {
               </span>
             )}
           </div>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <ScenarioCard scenario={projection.scenarios.bear} target={plan.target} />
-            <ScenarioCard scenario={projection.scenarios.base} target={plan.target} highlight />
-            <ScenarioCard scenario={projection.scenarios.bull} target={plan.target} />
-          </div>
+          {ratesLoading ? (
+            <ReckonLoader
+              label="Pulling live market data…"
+              className="rounded-xl border border-border bg-card/40 py-12"
+            />
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Reveal delay={0}>
+                <ScenarioCard scenario={projection.scenarios.bear} target={plan.target} />
+              </Reveal>
+              <Reveal delay={100}>
+                <ScenarioCard scenario={projection.scenarios.base} target={plan.target} highlight />
+              </Reveal>
+              <Reveal delay={200}>
+                <ScenarioCard scenario={projection.scenarios.bull} target={plan.target} />
+              </Reveal>
+            </div>
+          )}
         </div>
 
         {/* Actions */}
-        <div className="mt-10">
+        <Reveal className="mt-10">
           <SuggestedActions actions={projection.actions} goalMet={projection.baseGoalMet} />
-        </div>
+        </Reveal>
 
         {/* Portfolio optimization upsell */}
-        <div className="mt-8">
+        <Reveal delay={80} className="mt-8 block">
           <PortfolioOptimization />
-        </div>
+        </Reveal>
 
         <p className="mt-10 text-pretty text-xs leading-relaxed text-muted-foreground">
           Projections are illustrative estimates based on assumed average annual
@@ -171,7 +194,7 @@ function ConversionNote({ code }: { code: string }) {
 
 function SummaryStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-card px-4 py-3">
+    <div className="bg-card/40 px-4 py-3">
       <dt className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
         {label}
       </dt>

@@ -2,9 +2,11 @@
 
 import { useState, type FormEvent } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowRight, Loader2 } from "lucide-react"
+import { ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SiteHeader } from "@/components/site-header"
+import { Reveal } from "@/components/reveal"
+import { ReckonSpinner } from "@/components/reckon-loader"
 import { usePlan } from "@/components/plan-provider"
 import {
   HoldingsInput,
@@ -94,7 +96,7 @@ export default function FormPage() {
       <SiteHeader />
       <main className="mx-auto max-w-6xl px-5 py-10 sm:py-14">
         {/* Hero */}
-        <div className="max-w-2xl">
+        <Reveal className="max-w-2xl">
           <div className="flex items-center gap-3">
             <span className="font-mono text-xs font-medium uppercase tracking-[0.2em] text-primary">
               Scenario planning
@@ -109,7 +111,7 @@ export default function FormPage() {
             you exactly how close you are across market conditions, and how to
             close any gap.
           </p>
-        </div>
+        </Reveal>
 
         <div className="mt-10 grid gap-8 lg:grid-cols-[1.65fr_1fr]">
           {/* Form */}
@@ -213,7 +215,7 @@ export default function FormPage() {
             >
               {calculating ? (
                 <>
-                  <Loader2 className="size-4.5 animate-spin" aria-hidden="true" />
+                  <ReckonSpinner />
                   Calculating projection…
                 </>
               ) : (
@@ -236,45 +238,52 @@ export default function FormPage() {
 
           {/* Sidebar */}
           <aside className="flex flex-col gap-5">
-            {/* Your target */}
-            <div className="rounded-xl border border-border bg-card p-5">
-              <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                Your target
-              </p>
-              <p className="mt-3 font-mono text-4xl font-bold tracking-tight text-foreground">
-                ${target || "0"}
-              </p>
-              <p className="mt-1.5 text-sm text-muted-foreground">
-                by age {parseAge(targetAge) || "—"}
-                {yearsToGoal > 0
-                  ? ` · ${yearsToGoal} year${yearsToGoal === 1 ? "" : "s"} away`
-                  : ""}
-              </p>
-            </div>
+            {/* Your target — premium glass card with a slow shimmer sweep */}
+            <Reveal delay={80}>
+              <div className="glass-card glass-card-glow relative overflow-hidden rounded-xl p-5">
+                <span className="shimmer-sweep" aria-hidden="true" />
+                <div className="relative">
+                  <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                    Your target
+                  </p>
+                  <p className="mt-3 font-mono text-4xl font-bold tracking-tight text-foreground">
+                    ${target || "0"}
+                  </p>
+                  <p className="mt-1.5 text-sm text-muted-foreground">
+                    by age {parseAge(targetAge) || "—"}
+                    {yearsToGoal > 0
+                      ? ` · ${yearsToGoal} year${yearsToGoal === 1 ? "" : "s"} away`
+                      : ""}
+                  </p>
+                </div>
+              </div>
+            </Reveal>
 
             {/* How this works */}
-            <div className="rounded-xl border border-border bg-card p-5">
-              <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                How this works
-              </p>
-              <ol className="mt-4 flex flex-col gap-4">
-                {HOW_IT_WORKS.map((step, i) => (
-                  <li key={step.title} className="flex gap-3">
-                    <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-primary/10 font-mono text-xs font-semibold text-primary">
-                      {i + 1}
-                    </span>
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">
-                        {step.title}
-                      </p>
-                      <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                        {step.description}
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            </div>
+            <Reveal delay={180}>
+              <div className="glass-card rounded-xl p-5">
+                <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                  How this works
+                </p>
+                <ol className="mt-4 flex flex-col gap-4">
+                  {HOW_IT_WORKS.map((step, i) => (
+                    <li key={step.title} className="flex gap-3">
+                      <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-primary/10 font-mono text-xs font-semibold text-primary">
+                        {i + 1}
+                      </span>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">
+                          {step.title}
+                        </p>
+                        <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                          {step.description}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </Reveal>
           </aside>
         </div>
       </main>

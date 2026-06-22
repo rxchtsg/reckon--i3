@@ -8,9 +8,9 @@ import {
   ChevronsUpDown,
   Upload,
   Camera,
-  Loader2,
   Sparkles,
 } from "lucide-react"
+import { ReckonLoader } from "@/components/reckon-loader"
 
 export type Holding = {
   id: string
@@ -254,24 +254,12 @@ export function HoldingsInput({
       ) : null}
 
       {stage === "processing" ? (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-border bg-card/60 px-5 py-9 text-center">
-          <Loader2
-            className="size-6 animate-spin text-primary"
-            aria-hidden="true"
+        <div className="glass-card flex flex-col items-center justify-center rounded-xl px-5 py-9 text-center">
+          <ReckonLoader
+            label={
+              fileName ? `Reading ${fileName}…` : "Reading your screenshot…"
+            }
           />
-          <div>
-            <p className="text-sm font-medium text-foreground">
-              Reading your screenshot…
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {fileName
-                ? `Extracting holdings from ${fileName}`
-                : "Extracting your holdings"}
-            </p>
-          </div>
-          <span className="sr-only" role="status">
-            Processing uploaded screenshot
-          </span>
         </div>
       ) : null}
 
