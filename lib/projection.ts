@@ -126,12 +126,24 @@ function requiredMonthly(
   return Math.max(0, needed)
 }
 
-export function formatCurrency(value: number): string {
+function formatUSD(value: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
     maximumFractionDigits: 0,
   }).format(Math.round(value))
+}
+
+/** USD formatter retained for callers that always want the base currency. */
+export const formatCurrency = formatUSD
+
+// Active money formatter used by the projection's generated prose. Defaults to
+// USD, but buildProjection can swap in a currency-aware formatter so the
+// rationale and suggested-action copy reflect the user's selected currency.
+let activeFormat: (value: number) => string = formatUSD
+
+function fmt(value: number): string {
+  return activeFormat(value)
 }
 
 function buildRationale(
@@ -154,16 +166,16 @@ function buildRationale(
     const surplus = baseFinal - input.target
 
     if (startingPrincipal > 0 && principalCompounded >= input.target * 0.75) {
-      return `Your ${formatCurrency(startingPrincipal)} starting balance compounds to ${formatCurrency(principalCompounded)} at the Base return rate — contributions add the cushion that puts you ${formatCurrency(surplus)} past your ${formatCurrency(input.target)} goal.`
+      return `Your ${fmt(startingPrincipal)} starting balance compounds to ${fmt(principalCompounded)} at the Base return rate — contributions add the cushion that puts you ${fmt(surplus)} past your ${fmt(input.target)} goal.`
     }
     if (input.monthly > 0 && contributionFV > principalCompounded * 1.2) {
-      return `Your ${formatCurrency(input.monthly)}/month contribution rate is the main growth engine, adding ${formatCurrency(contributionFV)} over ${years.toFixed(1)} years — comfortably clearing your ${formatCurrency(input.target)} target with ${formatCurrency(surplus)} to spare.`
+      return `Your ${fmt(input.monthly)}/month contribution rate is the main growth engine, adding ${fmt(contributionFV)} over ${years.toFixed(1)} years — comfortably clearing your ${fmt(input.target)} target with ${fmt(surplus)} to spare.`
     }
     const parts = [
-      startingPrincipal > 0 ? `${formatCurrency(startingPrincipal)} starting balance` : null,
-      input.monthly > 0 ? `${formatCurrency(input.monthly)}/month` : null,
+      startingPrincipal > 0 ? `${fmt(startingPrincipal)} starting balance` : null,
+      input.monthly > 0 ? `${fmt(input.monthly)}/month` : null,
     ].filter(Boolean).join(" and ")
-    return `Your ${parts} over ${years.toFixed(1)} years reaches ${formatCurrency(baseFinal)} at current return assumptions — clearing your ${formatCurrency(input.target)} target by ${formatCurrency(surplus)}.`
+    return `Your ${parts} over ${years.toFixed(1)} years reaches ${fmt(baseFinal)} at current return assumptions — clearing your ${fmt(input.target)} target by ${fmt(surplus)}.`
   }
 
   if (!baseGoalMet) {
@@ -174,29 +186,33 @@ function buildRationale(
     const timeRatio = extraMonths !== null ? extraMonths / Math.max(1, months) : Infinity
 
     if (Number.isFinite(neededMonthly) && monthlyRatio <= 2.5 && monthlyRatio <= timeRatio + 0.5) {
-      return `Your ${formatCurrency(input.monthly)}/month contribution isn't enough to close this gap within ${years.toFixed(1)} years at current return assumptions — increasing it by ${formatCurrency(monthlyIncrease)}/month to ${formatCurrency(neededMonthly)} is your most efficient lever.`
+      return `Your ${fmt(input.monthly)}/month contribution isn't enough to close this gap within ${years.toFixed(1)} years at current return assumptions — increasing it by ${fmt(monthlyIncrease)}/month to ${fmt(neededMonthly)} is your most efficient lever.`
     }
     if (extraMonths !== null && timeRatio <= 0.25) {
       const label = extraMonths < 12 ? `${extraMonths} months` : `${(extraMonths / 12).toFixed(1)} years`
-      return `At ${formatCurrency(input.monthly)}/month you're close — extending your timeline by ${label} lets compounding close the gap without raising contributions.`
+      return `At ${fmt(input.monthly)}/month you're close — extending your timeline by ${label} lets compounding close the gap without raising contributions.`
     }
     if (Number.isFinite(neededMonthly) && monthlyRatio <= 4.0) {
-      return `Your ${formatCurrency(input.monthly)}/month contribution isn't enough to close this gap within ${years.toFixed(1)} years at current return assumptions — increasing it is your most efficient lever.`
+      return `Your ${fmt(input.monthly)}/month contribution isn't enough to close this gap within ${years.toFixed(1)} years at current return assumptions — increasing it is your most efficient lever.`
     }
     if (extraMonths !== null) {
-      return `The ${years.toFixed(1)}-year window is the binding constraint — at ${formatCurrency(input.monthly)}/month you'd need roughly ${(extraMonths / 12).toFixed(1)} more years to close the gap at current return assumptions.`
+      return `The ${years.toFixed(1)}-year window is the binding constraint — at ${fmt(input.monthly)}/month you'd need roughly ${(extraMonths / 12).toFixed(1)} more years to close the gap at current return assumptions.`
     }
-    return `The gap of ${formatCurrency(input.target - baseFinal)} is significant relative to your ${years.toFixed(1)}-year window — closing it will require meaningfully higher contributions, more time, or both.`
+    return `The gap of ${fmt(input.target - baseFinal)} is significant relative to your ${years.toFixed(1)}-year window — closing it will require meaningfully higher contributions, more time, or both.`
   }
 
   // Base is on track but bear falls short
-  return `Your Base and Bull scenarios are on track, but a market downturn leaves a ${formatCurrency(input.target - bearFinal)} shortfall. Adding a small buffer would protect you against a bad stretch of returns.`
+  return `Your Base and Bull scenarios are on track, but a market downturn leaves a ${fmt(input.target - bearFinal)} shortfall. Adding a small buffer would protect you against a bad stretch of returns.`
 }
 
 export function buildProjection(
   input: PlanInput,
   riskRates: RiskRates = DEFAULT_RATES,
+  formatMoney: (value: number) => string = formatUSD,
 ): Projection {
+  // The generated prose (rationale + actions) formats money through `fmt`, so
+  // point it at the caller's currency-aware formatter for this build.
+  activeFormat = formatMoney
   const startingPrincipal = parseHoldings(input.holdings)
   const months = monthsFromAges(input.currentAge, input.targetAge)
   const years = months / 12
@@ -265,7 +281,7 @@ function buildActions(
     const surplus = scenarios.base.finalAmount - input.target
     actions.push({
       title: "You're on pace — protect the plan",
-      detail: `Your Base scenario clears the target by ${formatCurrency(surplus)}. Keep contributions automatic so you don't drift off track.`,
+      detail: `Your Base scenario clears the target by ${fmt(surplus)}. Keep contributions automatic so you don't drift off track.`,
     })
     actions.push({
       title: "Consider reaching the goal sooner",
@@ -274,7 +290,7 @@ function buildActions(
     })
     actions.push({
       title: "Build a cushion for Bear markets",
-      detail: `In a downturn you'd land near ${formatCurrency(scenarios.bear.finalAmount)}. A small buffer keeps you covered if returns disappoint.`,
+      detail: `In a downturn you'd land near ${fmt(scenarios.bear.finalAmount)}. A small buffer keeps you covered if returns disappoint.`,
     })
     return actions
   }
@@ -284,8 +300,8 @@ function buildActions(
   const extra = Math.max(0, needMonthly - input.monthly)
   if (Number.isFinite(extra) && extra > 0) {
     actions.push({
-      title: `Add ${formatCurrency(extra)} to your monthly contribution`,
-      detail: `Raising contributions from ${formatCurrency(input.monthly)} to about ${formatCurrency(needMonthly)} per month puts the Base scenario on target.`,
+      title: `Add ${fmt(extra)} to your monthly contribution`,
+      detail: `Raising contributions from ${fmt(input.monthly)} to about ${fmt(needMonthly)} per month puts the Base scenario on target.`,
     })
   }
 
@@ -313,7 +329,7 @@ function buildActions(
     const projected = futureValue(principal, input.monthly, newBase, months)
     actions.push({
       title: `Move the risk slider to approximately ${Math.round(targetScore)}`,
-      detail: `Raising your risk setting from about ${Math.round(input.riskScore)} to ${Math.round(targetScore)} (of 100) targets roughly ${(newBase * 100).toFixed(1)}% annual returns, lifting your Base projection to about ${formatCurrency(projected)} — though with wider swings.`,
+      detail: `Raising your risk setting from about ${Math.round(input.riskScore)} to ${Math.round(targetScore)} (of 100) targets roughly ${(newBase * 100).toFixed(1)}% annual returns, lifting your Base projection to about ${fmt(projected)} — though with wider swings.`,
     })
   } else {
     actions.push({

@@ -1,7 +1,16 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Plus, X, Check, ChevronsUpDown } from "lucide-react"
+import {
+  Plus,
+  X,
+  Check,
+  ChevronsUpDown,
+  Upload,
+  Camera,
+  Loader2,
+  Sparkles,
+} from "lucide-react"
 
 export type Holding = {
   id: string
@@ -57,6 +66,20 @@ function formatWithCommas(raw: string): string {
   return rest.length > 0 ? `${grouped}.${rest.join("")}` : grouped
 }
 
+// Simulated extraction result — stands in for a screenshot-parsing service.
+// Returns a realistic-looking set of holdings the user can review and edit.
+function simulateExtraction(): Holding[] {
+  const sample: { ticker: string; amount: string }[] = [
+    { ticker: "VOO", amount: "8,420" },
+    { ticker: "AAPL", amount: "3,150" },
+    { ticker: "NVDA", amount: "2,600" },
+    { ticker: "QQQ", amount: "1,875" },
+  ]
+  return sample.map((s) => ({ id: Math.random().toString(36).slice(2), ...s }))
+}
+
+type UploadStage = "idle" | "processing" | "review"
+
 export function HoldingsInput({
   holdings,
   onChange,
@@ -64,6 +87,19 @@ export function HoldingsInput({
   holdings: Holding[]
   onChange: (next: Holding[]) => void
 }) {
+  const [stage, setStage] = useState<UploadStage>("idle")
+  const [fileName, setFileName] = useState<string | null>(null)
+  const [dragActive, setDragActive] = useState(false)
+  const [extracted, setExtracted] = useState<Holding[]>([])
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
+  }, [])
+
   function updateRow(id: string, patch: Partial<Holding>) {
     onChange(holdings.map((h) => (h.id === id ? { ...h, ...patch } : h)))
   }
@@ -74,6 +110,44 @@ export function HoldingsInput({
 
   function removeRow(id: string) {
     onChange(holdings.filter((h) => h.id !== id))
+  }
+
+  function handleFile(file: File | undefined) {
+    if (!file || !file.type.startsWith("image/")) return
+    setFileName(file.name)
+    setStage("processing")
+    timerRef.current = setTimeout(() => {
+      setExtracted(simulateExtraction())
+      setStage("review")
+    }, 1900)
+  }
+
+  function updateExtractedRow(id: string, patch: Partial<Holding>) {
+    setExtracted((rows) =>
+      rows.map((h) => (h.id === id ? { ...h, ...patch } : h)),
+    )
+  }
+
+  function removeExtractedRow(id: string) {
+    setExtracted((rows) => rows.filter((h) => h.id !== id))
+  }
+
+  function resetUpload() {
+    setStage("idle")
+    setFileName(null)
+    setExtracted([])
+    if (fileInputRef.current) fileInputRef.current.value = ""
+  }
+
+  function confirmExtracted() {
+    // Merge extracted rows into the existing holdings, dropping any blank
+    // placeholder rows the user hasn't filled in yet.
+    const valid = extracted.filter((h) => h.ticker.trim() !== "")
+    const existing = holdings.filter(
+      (h) => h.ticker.trim() !== "" || h.amount.trim() !== "",
+    )
+    onChange(existing.length > 0 ? [...existing, ...valid] : valid)
+    resetUpload()
   }
 
   return (
@@ -124,6 +198,194 @@ export function HoldingsInput({
         <Plus className="size-4" aria-hidden="true" />
         Add holding
       </button>
+
+      {/* Divider */}
+      <div className="my-1 flex items-center gap-3">
+        <span className="h-px flex-1 bg-border" aria-hidden="true" />
+        <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+          Or
+        </span>
+        <span className="h-px flex-1 bg-border" aria-hidden="true" />
+      </div>
+
+      {/* Screenshot upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="sr-only"
+        onChange={(e) => handleFile(e.target.files?.[0])}
+      />
+
+      {stage === "idle" ? (
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          onDragOver={(e) => {
+            e.preventDefault()
+            setDragActive(true)
+          }}
+          onDragLeave={() => setDragActive(false)}
+          onDrop={(e) => {
+            e.preventDefault()
+            setDragActive(false)
+            handleFile(e.dataTransfer.files?.[0])
+          }}
+          className={`group flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed px-5 py-7 text-center transition-colors ${
+            dragActive
+              ? "border-primary bg-primary/10"
+              : "border-border bg-card/40 hover:border-primary/50 hover:bg-card/70"
+          }`}
+        >
+          <span className="flex size-11 items-center justify-center rounded-full border border-border bg-secondary text-muted-foreground transition-colors group-hover:border-primary/40 group-hover:text-primary">
+            <Camera className="size-5" aria-hidden="true" />
+          </span>
+          <span className="mt-0.5 text-sm font-medium text-foreground">
+            Or upload a screenshot of your portfolio
+          </span>
+          <span className="text-xs text-muted-foreground">
+            We&apos;ll extract your holdings automatically.
+          </span>
+          <span className="mt-1 inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-muted-foreground/80">
+            <Upload className="size-3.5" aria-hidden="true" />
+            Drag &amp; drop or click to browse
+          </span>
+        </button>
+      ) : null}
+
+      {stage === "processing" ? (
+        <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-border bg-card/60 px-5 py-9 text-center">
+          <Loader2
+            className="size-6 animate-spin text-primary"
+            aria-hidden="true"
+          />
+          <div>
+            <p className="text-sm font-medium text-foreground">
+              Reading your screenshot…
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {fileName
+                ? `Extracting holdings from ${fileName}`
+                : "Extracting your holdings"}
+            </p>
+          </div>
+          <span className="sr-only" role="status">
+            Processing uploaded screenshot
+          </span>
+        </div>
+      ) : null}
+
+      {stage === "review" ? (
+        <ExtractedReview
+          rows={extracted}
+          fileName={fileName}
+          onUpdate={updateExtractedRow}
+          onRemove={removeExtractedRow}
+          onCancel={resetUpload}
+          onConfirm={confirmExtracted}
+        />
+      ) : null}
+    </div>
+  )
+}
+
+function ExtractedReview({
+  rows,
+  fileName,
+  onUpdate,
+  onRemove,
+  onCancel,
+  onConfirm,
+}: {
+  rows: Holding[]
+  fileName: string | null
+  onUpdate: (id: string, patch: Partial<Holding>) => void
+  onRemove: (id: string) => void
+  onCancel: () => void
+  onConfirm: () => void
+}) {
+  const hasRows = rows.length > 0
+  return (
+    <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
+      <div className="flex items-start gap-2.5">
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+          <Sparkles className="size-4" aria-hidden="true" />
+        </span>
+        <div className="flex-1">
+          <p className="text-sm font-semibold text-foreground">
+            Review extracted holdings
+          </p>
+          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+            We found {rows.length} holding{rows.length === 1 ? "" : "s"}
+            {fileName ? ` in ${fileName}` : ""}. Check the tickers and amounts,
+            then confirm — edit anything that needs correcting.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-col gap-2.5">
+        {hasRows ? (
+          rows.map((row) => (
+            <div key={row.id} className="flex items-center gap-2">
+              <div className="flex-1">
+                <TickerCombobox
+                  value={row.ticker}
+                  onChange={(ticker) => onUpdate(row.id, { ticker })}
+                />
+              </div>
+              <div className="flex w-36 items-center rounded-lg border border-input bg-card transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/30">
+                <span className="pl-3 font-mono text-sm text-muted-foreground">
+                  $
+                </span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={row.amount}
+                  onChange={(e) =>
+                    onUpdate(row.id, {
+                      amount: formatWithCommas(e.target.value),
+                    })
+                  }
+                  placeholder="0"
+                  aria-label="Dollar amount"
+                  className="w-full rounded-lg bg-transparent py-2.5 pl-1 pr-3 font-mono text-sm text-foreground outline-none placeholder:text-muted-foreground/60"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => onRemove(row.id)}
+                aria-label="Remove extracted holding"
+                className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:border-destructive/50 hover:text-destructive"
+              >
+                <X className="size-4" aria-hidden="true" />
+              </button>
+            </div>
+          ))
+        ) : (
+          <p className="rounded-lg border border-dashed border-border px-3 py-3 text-center text-xs text-muted-foreground">
+            No holdings left. Cancel to try a different screenshot.
+          </p>
+        )}
+      </div>
+
+      <div className="mt-4 flex items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={onConfirm}
+          disabled={!hasRows}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <Check className="size-4" aria-hidden="true" />
+          Confirm holdings
+        </button>
+      </div>
     </div>
   )
 }
