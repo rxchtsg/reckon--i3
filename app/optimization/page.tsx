@@ -1,11 +1,12 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import Link from "next/link"
 import { ArrowLeft, Building2, ShieldCheck, TriangleAlert } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { usePlan } from "@/components/plan-provider"
 import { riskLabel } from "@/lib/projection"
+import { useCountUp } from "@/hooks/use-count-up"
 
 // Shared dark navy→black gradient, identical to the rest of the app.
 const GRADIENT_BG = {
@@ -13,43 +14,82 @@ const GRADIENT_BG = {
     "linear-gradient(180deg, oklch(0.23 0.035 255) 0%, oklch(0.18 0.018 250) 32%, var(--background) 70%)",
 }
 
-type Slice = { label: string; weight: number; color: string }
+type CategoryKey =
+  | "Individual Stocks"
+  | "US ETFs"
+  | "International ETFs"
+  | "Sector ETFs"
+  | "Fixed Income"
+  | "Cash"
 
-// Restrained emerald/blue/slate palette — literal oklch values so the donut
-// stays colorful regardless of the dark scheme's greyscale chart-token
-// overrides, matching the rest of the app's allocation visuals.
-const C = {
-  usLarge: "oklch(0.74 0.15 162)", // emerald (primary)
-  intl: "oklch(0.7 0.11 220)", // blue
-  bonds: "oklch(0.62 0.09 245)", // deep blue
-  realEstate: "oklch(0.68 0.08 195)", // teal
-  crypto: "oklch(0.78 0.13 85)", // gold
-  cash: "oklch(0.6 0.02 240)", // slate
+type Slice = { label: CategoryKey; weight: number }
+
+// Category metadata framed the way a self-directed Trading 212 / ISA investor
+// thinks about their own holdings. `color`/`light` are literal oklch values so
+// the donut keeps its emerald/teal palette regardless of chart-token overrides,
+// and each gets a one-line plain-language description used in the tooltip.
+const CATEGORIES: Record<
+  CategoryKey,
+  { color: string; light: string; desc: string }
+> = {
+  "Individual Stocks": {
+    color: "oklch(0.74 0.15 162)",
+    light: "oklch(0.84 0.13 162)",
+    desc: "Individual stocks you've picked directly",
+  },
+  "US ETFs": {
+    color: "oklch(0.72 0.12 185)",
+    light: "oklch(0.82 0.10 185)",
+    desc: "Broad US market funds like S&P 500 trackers",
+  },
+  "International ETFs": {
+    color: "oklch(0.68 0.11 220)",
+    light: "oklch(0.79 0.10 220)",
+    desc: "Funds tracking global and overseas markets",
+  },
+  "Sector ETFs": {
+    color: "oklch(0.79 0.13 95)",
+    light: "oklch(0.87 0.11 95)",
+    desc: "Themed funds focused on specific industries",
+  },
+  "Fixed Income": {
+    color: "oklch(0.62 0.09 245)",
+    light: "oklch(0.73 0.09 245)",
+    desc: "Bonds and gilts that steady your portfolio",
+  },
+  Cash: {
+    color: "oklch(0.66 0.02 240)",
+    light: "oklch(0.78 0.02 240)",
+    desc: "Uninvested cash and money-market holdings",
+  },
 }
 
 // Three optimized target mixes, keyed by the portfolio's own risk band.
 // Each sums to 100.
 const ALLOCATIONS: Record<"Low" | "Medium" | "High", Slice[]> = {
   Low: [
-    { label: "Bonds", weight: 40, color: C.bonds },
-    { label: "US Large Cap", weight: 25, color: C.usLarge },
-    { label: "International", weight: 13, color: C.intl },
-    { label: "Real Estate", weight: 10, color: C.realEstate },
-    { label: "Cash", weight: 12, color: C.cash },
+    { label: "Fixed Income", weight: 38 },
+    { label: "US ETFs", weight: 24 },
+    { label: "International ETFs", weight: 12 },
+    { label: "Cash", weight: 12 },
+    { label: "Individual Stocks", weight: 8 },
+    { label: "Sector ETFs", weight: 6 },
   ],
   Medium: [
-    { label: "US Large Cap", weight: 35, color: C.usLarge },
-    { label: "International", weight: 20, color: C.intl },
-    { label: "Bonds", weight: 22, color: C.bonds },
-    { label: "Real Estate", weight: 12, color: C.realEstate },
-    { label: "Cash", weight: 11, color: C.cash },
+    { label: "US ETFs", weight: 30 },
+    { label: "Individual Stocks", weight: 18 },
+    { label: "International ETFs", weight: 18 },
+    { label: "Sector ETFs", weight: 12 },
+    { label: "Fixed Income", weight: 14 },
+    { label: "Cash", weight: 8 },
   ],
   High: [
-    { label: "US Large Cap", weight: 42, color: C.usLarge },
-    { label: "International", weight: 26, color: C.intl },
-    { label: "Real Estate", weight: 12, color: C.realEstate },
-    { label: "Crypto", weight: 12, color: C.crypto },
-    { label: "Bonds", weight: 8, color: C.bonds },
+    { label: "Individual Stocks", weight: 32 },
+    { label: "US ETFs", weight: 26 },
+    { label: "International ETFs", weight: 16 },
+    { label: "Sector ETFs", weight: 16 },
+    { label: "Fixed Income", weight: 6 },
+    { label: "Cash", weight: 4 },
   ],
 }
 
@@ -125,33 +165,11 @@ export default function OptimizationPage() {
         </p>
 
         {/* Donut chart + legend */}
-        <section className="mt-8 rounded-xl border border-border bg-card p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-border/80 hover:shadow-lg hover:shadow-black/20 sm:p-6">
+        <section className="glass-card glass-card-glow mt-8 rounded-xl p-5 transition-all duration-300 hover:-translate-y-0.5 sm:p-6">
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
             Suggested holdings
           </p>
-          <div className="mt-5 flex flex-col items-center gap-7 sm:flex-row sm:gap-9">
-            <AllocationDonut allocation={allocation} />
-            <ul className="flex w-full flex-col gap-3">
-              {allocation.map((slice) => (
-                <li
-                  key={slice.label}
-                  className="flex items-center justify-between gap-3"
-                >
-                  <span className="flex items-center gap-2.5 text-sm text-foreground">
-                    <span
-                      className="size-2.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: slice.color }}
-                      aria-hidden="true"
-                    />
-                    {slice.label}
-                  </span>
-                  <span className="font-mono text-sm font-medium text-muted-foreground">
-                    {slice.weight}%
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <AllocationBreakdown allocation={allocation} />
         </section>
 
         {/* Plain-language risk verdict */}
@@ -170,6 +188,234 @@ export default function OptimizationPage() {
   )
 }
 
+function AllocationBreakdown({ allocation }: { allocation: Slice[] }) {
+  // Shared hover state lets the donut and legend highlight together.
+  const [active, setActive] = useState<number | null>(null)
+
+  return (
+    <div className="mt-5 flex flex-col items-center gap-7 sm:flex-row sm:gap-9">
+      <AllocationDonut
+        allocation={allocation}
+        active={active}
+        setActive={setActive}
+      />
+      <ul className="flex w-full flex-col gap-3">
+        {allocation.map((slice, i) => (
+          <LegendRow
+            key={slice.label}
+            slice={slice}
+            index={i}
+            active={active}
+            onHover={setActive}
+          />
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function LegendRow({
+  slice,
+  index,
+  active,
+  onHover,
+}: {
+  slice: Slice
+  index: number
+  active: number | null
+  onHover: (i: number | null) => void
+}) {
+  const meta = CATEGORIES[slice.label]
+  // Count each percentage up from zero on load, lightly staggered.
+  const counted = useCountUp(slice.weight, 1000, 150 + index * 90)
+  const isActive = active === index
+  const dimmed = active !== null && !isActive
+
+  return (
+    <li
+      onMouseEnter={() => onHover(index)}
+      onMouseLeave={() => onHover(null)}
+      className="flex cursor-default items-center justify-between gap-3 rounded-md px-1.5 py-1 transition-all duration-200"
+      style={{
+        opacity: dimmed ? 0.45 : 1,
+        backgroundColor: isActive
+          ? "color-mix(in oklch, var(--card) 40%, transparent)"
+          : "transparent",
+      }}
+    >
+      <span className="flex items-center gap-2.5 text-sm text-foreground">
+        <span
+          className="size-2.5 shrink-0 rounded-full transition-transform duration-200"
+          style={{
+            backgroundColor: meta.color,
+            transform: isActive ? "scale(1.5)" : "scale(1)",
+            boxShadow: isActive
+              ? `0 0 8px ${meta.color}`
+              : "none",
+          }}
+          aria-hidden="true"
+        />
+        {slice.label}
+      </span>
+      <span className="font-mono text-sm font-medium tabular-nums text-muted-foreground">
+        {Math.round(counted)}%
+      </span>
+    </li>
+  )
+}
+
+function AllocationDonut({
+  allocation,
+  active,
+  setActive,
+}: {
+  allocation: Slice[]
+  active: number | null
+  setActive: (i: number | null) => void
+}) {
+  const radius = 42
+  const circumference = 2 * Math.PI * radius
+  const gap = 2.5
+  const [tip, setTip] = useState<{ x: number; y: number } | null>(null)
+
+  // Precompute each arc's dash geometry in a single pass.
+  let running = 0
+  const arcs = allocation.map((slice) => {
+    const length = (slice.weight / 100) * circumference - gap
+    const dashOffset = -running
+    running += length + gap
+    return { slice, length, dashOffset }
+  })
+
+  const activeSlice = active !== null ? allocation[active] : null
+  const activeMeta = activeSlice ? CATEGORIES[activeSlice.label] : null
+
+  return (
+    <div
+      className="relative flex shrink-0 items-center justify-center"
+      onMouseLeave={() => {
+        setActive(null)
+        setTip(null)
+      }}
+    >
+      {/* Always-on soft ambient bloom behind the donut. */}
+      <div
+        aria-hidden="true"
+        className="animate-ambient pointer-events-none absolute inset-0 -z-10 rounded-full blur-2xl"
+        style={{
+          background:
+            "radial-gradient(circle, oklch(0.74 0.15 162 / 0.45) 0%, oklch(0.7 0.12 185 / 0.28) 45%, transparent 72%)",
+        }}
+      />
+
+      <svg
+        viewBox="0 0 120 120"
+        className="size-44 -rotate-90 animate-donut-pop overflow-visible"
+        role="img"
+        aria-label="Optimized portfolio allocation breakdown by category"
+      >
+        <defs>
+          {arcs.map(({ slice }, i) => {
+            const meta = CATEGORIES[slice.label]
+            return (
+              <linearGradient
+                key={slice.label}
+                id={`alloc-grad-${i}`}
+                x1="0"
+                y1="0"
+                x2="1"
+                y2="1"
+              >
+                <stop offset="0%" stopColor={meta.light} />
+                <stop offset="100%" stopColor={meta.color} />
+              </linearGradient>
+            )
+          })}
+        </defs>
+
+        {/* Track */}
+        <circle
+          cx="60"
+          cy="60"
+          r={radius}
+          fill="none"
+          stroke="var(--border)"
+          strokeWidth="14"
+        />
+
+        {arcs.map(({ slice, length, dashOffset }, i) => {
+          const meta = CATEGORIES[slice.label]
+          const isActive = active === i
+          const dimmed = active !== null && !isActive
+          return (
+            <circle
+              key={slice.label}
+              cx="60"
+              cy="60"
+              r={radius}
+              fill="none"
+              stroke={`url(#alloc-grad-${i})`}
+              strokeWidth={isActive ? 18 : 14}
+              strokeLinecap="round"
+              strokeDasharray={`${length} ${circumference - length}`}
+              strokeDashoffset={dashOffset}
+              className="cursor-pointer [transition:stroke-width_0.25s_ease,opacity_0.25s_ease,filter_0.25s_ease]"
+              style={{
+                opacity: dimmed ? 0.35 : 1,
+                // Soft light bloom in the segment's own color — layered blurs
+                // for a gentle glow rather than a hard neon edge.
+                filter: isActive
+                  ? `drop-shadow(0 0 4px ${meta.color}) drop-shadow(0 0 9px color-mix(in oklch, ${meta.color} 70%, transparent))`
+                  : "none",
+              }}
+              onMouseEnter={() => setActive(i)}
+              onMouseMove={(e) => {
+                const rect =
+                  e.currentTarget.ownerSVGElement?.parentElement?.getBoundingClientRect()
+                if (rect) {
+                  setTip({
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top,
+                  })
+                }
+              }}
+            />
+          )
+        })}
+      </svg>
+
+      {/* Tooltip — category, percentage, plain-language description. */}
+      {activeSlice && activeMeta && tip ? (
+        <div
+          role="tooltip"
+          className="pointer-events-none absolute z-20 w-52 -translate-x-1/2 -translate-y-full rounded-lg border border-border bg-popover/95 p-3 text-left shadow-xl backdrop-blur-md"
+          style={{ left: tip.x, top: tip.y - 12 }}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <span
+                className="size-2.5 rounded-full"
+                style={{
+                  backgroundColor: activeMeta.color,
+                  boxShadow: `0 0 6px ${activeMeta.color}`,
+                }}
+                aria-hidden="true"
+              />
+              {activeSlice.label}
+            </span>
+            <span className="font-mono text-sm font-bold text-foreground">
+              {activeSlice.weight}%
+            </span>
+          </div>
+          <p className="mt-1.5 text-pretty text-xs leading-relaxed text-muted-foreground">
+            {activeMeta.desc}
+          </p>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 function RiskMessage({
   isRiskier,
   statedLabel,
@@ -179,7 +425,7 @@ function RiskMessage({
 }) {
   if (isRiskier) {
     return (
-      <section className="mt-6 flex gap-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-amber-500/50 hover:shadow-lg hover:shadow-amber-950/20">
+      <section className="mt-6 flex gap-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-5 backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-amber-500/50 hover:shadow-lg hover:shadow-amber-950/20">
         <span
           className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-amber-400"
           aria-hidden="true"
@@ -208,7 +454,16 @@ function RiskMessage({
   }
 
   return (
-    <section className="mt-6 flex gap-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-emerald-500/50 hover:shadow-lg hover:shadow-emerald-950/20">
+    <section className="relative mt-6 flex gap-4 overflow-hidden rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-5 backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-emerald-500/50 hover:shadow-lg hover:shadow-emerald-950/20">
+      {/* Slow living color drift so the verdict feels alive, not static. */}
+      <div
+        aria-hidden="true"
+        className="animate-ambient-shift pointer-events-none absolute inset-0 -z-10 opacity-70"
+        style={{
+          backgroundImage:
+            "linear-gradient(120deg, oklch(0.74 0.15 162 / 0.18) 0%, oklch(0.7 0.12 185 / 0.10) 45%, oklch(0.68 0.11 220 / 0.16) 100%)",
+        }}
+      />
       <span
         className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-400"
         aria-hidden="true"
@@ -244,10 +499,10 @@ function InstitutionalPositioning({ allocation }: { allocation: Slice[] }) {
   )
 
   return (
-    <section className="mt-6 rounded-xl border border-border bg-card/60 p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-border/80 hover:shadow-lg hover:shadow-black/20">
+    <section className="glass-card mt-6 rounded-xl border-l-2 border-l-amber-500/50 p-5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/20">
       <div className="flex items-center gap-2.5">
         <span
-          className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-secondary text-muted-foreground"
+          className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-400/90"
           aria-hidden="true"
         >
           <Building2 className="size-4" />
@@ -275,51 +530,5 @@ function InstitutionalPositioning({ allocation }: { allocation: Slice[] }) {
         {overlapping.map((s) => s.label).join(", ")}
       </p>
     </section>
-  )
-}
-
-function AllocationDonut({ allocation }: { allocation: Slice[] }) {
-  const radius = 42
-  const circumference = 2 * Math.PI * radius
-  let offset = 0
-
-  return (
-    <div className="flex shrink-0 items-center justify-center">
-      <svg
-        viewBox="0 0 120 120"
-        className="size-44 -rotate-90"
-        role="img"
-        aria-label="Optimized portfolio allocation breakdown by category"
-      >
-        <circle
-          cx="60"
-          cy="60"
-          r={radius}
-          fill="none"
-          stroke="var(--border)"
-          strokeWidth="14"
-        />
-        {allocation.map((slice) => {
-          const gap = 2.5
-          const length = (slice.weight / 100) * circumference - gap
-          const dashOffset = -offset
-          offset += length + gap
-          return (
-            <circle
-              key={slice.label}
-              cx="60"
-              cy="60"
-              r={radius}
-              fill="none"
-              stroke={slice.color}
-              strokeWidth="14"
-              strokeLinecap="round"
-              strokeDasharray={`${length} ${circumference - length}`}
-              strokeDashoffset={dashOffset}
-            />
-          )
-        })}
-      </svg>
-    </div>
   )
 }
