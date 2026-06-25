@@ -297,6 +297,25 @@
       transform: scale(1.07);
     }
   }
+
+  /*
+   * Slow living color drift for the "you're in range" verdict card. Pairs a
+   * wide emerald→teal gradient with a travelling background-position so the
+   * surface feels gently alive rather than static.
+   */
+  .animate-ambient-shift {
+    background-size: 220% 220%;
+    animation: ambient-shift 11s ease-in-out infinite;
+  }
+  @keyframes ambient-shift {
+    0%,
+    100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -304,7 +323,8 @@
   .animate-donut-pop,
   .animate-reckon-pulse,
   .animate-loader-bar,
-  .animate-ambient {
+  .animate-ambient,
+  .animate-ambient-shift {
     animation: none !important;
   }
 }
